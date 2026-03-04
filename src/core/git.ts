@@ -133,3 +133,58 @@ export async function getFileStatuses(base: string, branch: string): Promise<Fil
 
   return files;
 }
+
+export async function mergeWorktree(
+  worktreeName: string,
+  baseBranch?: string
+): Promise<{ success: boolean; message: string }> {
+  const worktrees = await getWorktrees();
+  const wt = worktrees.find((w) => w.name === worktreeName);
+  if (!wt) return { success: false, message: `Worktree '${worktreeName}' not found.` };
+  if (wt.isMain) return { success: false, message: "Cannot merge the main worktree." };
+
+  const base = await getBaseBranch(baseBranch);
+
+  // Merge the branch
+  const mergeResult = await $`git merge ${wt.branch} --no-edit`.quiet().nothrow();
+  if (mergeResult.exitCode !== 0) {
+    // Abort the merge
+    await $`git merge --abort`.quiet().nothrow();
+    return {
+      success: false,
+      message: `Merge conflict. Resolve manually:\n  cd ${wt.path}\n  git merge ${base}\n\n${mergeResult.stderr.toString()}`,
+    };
+  }
+
+  // Remove worktree and branch
+  await $`git worktree remove ${wt.path}`.quiet().nothrow();
+  await $`git branch -d ${wt.branch}`.quiet().nothrow();
+
+  return { success: true, message: `Merged '${wt.branch}' and cleaned up worktree.` };
+}
+
+export async function discardWorktree(
+  worktreeName: string,
+  deleteBranch: boolean = true
+): Promise<{ success: boolean; message: string }> {
+  const worktrees = await getWorktrees();
+  const wt = worktrees.find((w) => w.name === worktreeName);
+  if (!wt) return { success: false, message: `Worktree '${worktreeName}' not found.` };
+  if (wt.isMain) return { success: false, message: "Cannot discard the main worktree." };
+
+  const removeResult = await $`git worktree remove ${wt.path} --force`.quiet().nothrow();
+  if (removeResult.exitCode !== 0) {
+    return { success: false, message: `Failed to remove worktree: ${removeResult.stderr.toString()}` };
+  }
+
+  if (deleteBranch) {
+    await $`git branch -D ${wt.branch}`.quiet().nothrow();
+  }
+
+  return {
+    success: true,
+    message: deleteBranch
+      ? `Removed worktree and deleted branch '${wt.branch}'.`
+      : `Removed worktree. Branch '${wt.branch}' kept.`,
+  };
+}
