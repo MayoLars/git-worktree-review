@@ -1,4 +1,4 @@
-import { getWorktrees, getBaseBranch, getDiff, getDiffStat, mergeWorktree, discardWorktree } from "../core/git";
+import { getWorktrees, getBaseBranch, getDiff, getDiffStat, getCommitLog, mergeWorktree, discardWorktree } from "../core/git";
 import type { WorktreeDetail } from "../core/types";
 import { join } from "path";
 
@@ -45,11 +45,15 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
 
       for (const wt of worktrees) {
         if (wt.isMain) continue;
-        const diff = await getDiff(base, wt.branch);
+        const [diff, commits] = await Promise.all([
+          getDiff(base, wt.branch),
+          getCommitLog(base, wt.branch),
+        ]);
         details.push({
           ...wt,
           stat: diff.summary,
           files: diff.files,
+          commits,
         });
       }
 

@@ -1,4 +1,5 @@
-import { getWorktrees, getBaseBranch, getDiffStat } from "../core/git";
+import { getWorktrees, getBaseBranch, getDiffStat, getCommitLog } from "../core/git";
+import type { CommitInfo } from "../core/git";
 
 export default async function status() {
   const baseBranch = await getBaseBranch(getFlag("--base"));
@@ -10,31 +11,55 @@ export default async function status() {
     return;
   }
 
+  // Collect data first to calculate column widths
+  const rows: { name: string; branch: string; files: string; ins: string; del: string; commits: CommitInfo[] }[] = [];
+  for (const wt of worktrees) {
+    if (wt.isMain) continue;
+    const [stat, commits] = await Promise.all([
+      getDiffStat(baseBranch, wt.branch),
+      getCommitLog(baseBranch, wt.branch),
+    ]);
+    rows.push({
+      name: wt.name,
+      branch: wt.branch,
+      files: stat.filesChanged.toString(),
+      ins: `+${stat.insertions}`,
+      del: `-${stat.deletions}`,
+      commits,
+    });
+  }
+
+  const nameCol = Math.max(6, ...rows.map((r) => r.name.length)) + 2;
+  const branchCol = Math.max(8, ...rows.map((r) => r.branch.length)) + 2;
+  const totalWidth = nameCol + branchCol + 24;
+
   console.log(`\nWorktrees (base: ${baseBranch})\n`);
   console.log(
-    padRight("Name", 20) +
-    padRight("Branch", 30) +
+    padRight("Name", nameCol) +
+    padRight("Branch", branchCol) +
     padRight("Files", 8) +
     padRight("  +", 8) +
     padRight("  -", 8)
   );
-  console.log("─".repeat(74));
+  console.log("─".repeat(totalWidth));
 
-  for (const wt of worktrees) {
-    if (wt.isMain) continue;
-
-    const stat = await getDiffStat(baseBranch, wt.branch);
-    const filesStr = stat.filesChanged.toString();
-    const insStr = `+${stat.insertions}`;
-    const delStr = `-${stat.deletions}`;
-
+  for (const row of rows) {
     console.log(
-      padRight(wt.name, 20) +
-      padRight(wt.branch, 30) +
-      padRight(filesStr, 8) +
-      `\x1b[32m${padRight(insStr, 8)}\x1b[0m` +
-      `\x1b[31m${padRight(delStr, 8)}\x1b[0m`
+      padRight(row.name, nameCol) +
+      padRight(row.branch, branchCol) +
+      padRight(row.files, 8) +
+      `\x1b[32m${padRight(row.ins, 8)}\x1b[0m` +
+      `\x1b[31m${padRight(row.del, 8)}\x1b[0m`
     );
+
+    if (row.commits.length > 0) {
+      for (const c of row.commits) {
+        console.log(
+          `  \x1b[33m${c.shortHash}\x1b[0m ${c.subject} \x1b[2m(${c.author})\x1b[0m`
+        );
+      }
+      console.log();
+    }
   }
   console.log();
 }

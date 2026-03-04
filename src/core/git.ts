@@ -134,6 +134,35 @@ export async function getFileStatuses(base: string, branch: string): Promise<Fil
   return files;
 }
 
+export interface CommitInfo {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  author: string;
+  date: string;
+}
+
+export async function getCommitLog(base: string, branch: string): Promise<CommitInfo[]> {
+  const result = await $`git log ${base}..${branch} --format=%H%n%h%n%s%n%an%n%ai --reverse`.quiet().nothrow();
+  const text = result.text().trim();
+  if (!text) return [];
+
+  const lines = text.split("\n");
+  const commits: CommitInfo[] = [];
+
+  for (let i = 0; i + 4 < lines.length; i += 5) {
+    commits.push({
+      hash: lines[i],
+      shortHash: lines[i + 1],
+      subject: lines[i + 2],
+      author: lines[i + 3],
+      date: lines[i + 4],
+    });
+  }
+
+  return commits;
+}
+
 export async function mergeWorktree(
   worktreeName: string,
   baseBranch?: string

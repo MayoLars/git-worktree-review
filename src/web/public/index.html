@@ -237,6 +237,49 @@
   .diff-summary .stat { color: var(--text-secondary); }
   .diff-summary .stat strong { color: var(--text-primary); font-weight: 600; }
 
+  /* Commits list */
+  .commits-section {
+    margin-bottom: 24px;
+  }
+
+  .commit-row {
+    display: flex;
+    align-items: baseline;
+    padding: 6px 12px;
+    font-size: 13px;
+    gap: 10px;
+    border-radius: 4px;
+  }
+
+  .commit-row:hover { background: var(--bg-secondary); }
+
+  .commit-hash {
+    font-family: var(--font-mono);
+    color: var(--yellow);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .commit-subject {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .commit-author {
+    color: var(--text-muted);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .commit-date {
+    color: var(--text-muted);
+    font-size: 11px;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+  }
+
   /* Files list */
   .files-section {
     margin-bottom: 24px;
@@ -684,6 +727,22 @@
       <span class="stat"><span class="plus">+${summary.insertions ?? 0}</span> insertions</span>
       <span class="stat"><span class="minus">-${summary.deletions ?? 0}</span> deletions</span>
     </div>`;
+
+    // Commits
+    const commits = wt.commits || [];
+    if (commits.length > 0) {
+      html += `<div class="commits-section"><div class="section-title">Commits (${commits.length})</div>`;
+      for (const c of commits) {
+        const date = c.date ? c.date.substring(0, 10) : '';
+        html += `<div class="commit-row">
+          <span class="commit-hash">${esc(c.shortHash)}</span>
+          <span class="commit-subject">${esc(c.subject)}</span>
+          <span class="commit-author">${esc(c.author)}</span>
+          <span class="commit-date">${esc(date)}</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
 
     // Changed files list
     html += '<div class="files-section"><div class="section-title">Changed Files</div>';
