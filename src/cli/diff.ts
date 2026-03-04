@@ -1,4 +1,5 @@
 import { getWorktrees, getBaseBranch } from "../core/git";
+import { getFlag } from "./utils";
 import { $ } from "bun";
 
 export default async function diff() {
@@ -29,9 +30,4 @@ export default async function diff() {
   }
 
   process.stdout.write(output);
-}
-
-function getFlag(flag: string): string | undefined {
-  const idx = process.argv.indexOf(flag);
-  return idx !== -1 ? process.argv[idx + 1] : undefined;
 }

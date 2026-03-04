@@ -1,5 +1,6 @@
 import { getWorktrees, getBaseBranch, getDiffStat, getCommitLog } from "../core/git";
 import type { CommitInfo } from "../core/git";
+import { getFlag } from "./utils";
 
 export default async function status() {
   const baseBranch = await getBaseBranch(getFlag("--base"));
@@ -66,9 +67,4 @@ export default async function status() {
 
 function padRight(str: string, len: number): string {
   return str.length >= len ? str : str + " ".repeat(len - str.length);
-}
-
-function getFlag(flag: string): string | undefined {
-  const idx = process.argv.indexOf(flag);
-  return idx !== -1 ? process.argv[idx + 1] : undefined;
 }

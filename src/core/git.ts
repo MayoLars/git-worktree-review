@@ -79,11 +79,21 @@ export async function getDiffStat(base: string, branch: string): Promise<DiffSta
   };
 }
 
-function parseFileDiffs(statOutput: string): FileDiff[] {
-  const files: FileDiff[] = [];
-  const lines = statOutput.trim().split("\n");
+function parseFileDiffs(numstatOutput: string, nameStatusOutput: string): FileDiff[] {
+  // Build a map of path -> status from --name-status (accurate source)
+  const statusMap = new Map<string, FileDiff["status"]>();
+  for (const line of nameStatusOutput.trim().split("\n")) {
+    if (!line.trim()) continue;
+    const [statusChar, ...pathParts] = line.split("\t");
+    const path = pathParts.join("\t");
+    if (statusChar?.startsWith("A")) statusMap.set(path, "A");
+    else if (statusChar?.startsWith("D")) statusMap.set(path, "D");
+    else if (statusChar?.startsWith("R")) statusMap.set(path, "R");
+    else statusMap.set(path, "M");
+  }
 
-  for (const line of lines) {
+  const files: FileDiff[] = [];
+  for (const line of numstatOutput.trim().split("\n")) {
     // Format: "insertions\tdeletions\tfilepath"
     const match = line.match(/^(\d+|-)\t(\d+|-)\t(.+)$/);
     if (!match) continue;
@@ -91,10 +101,7 @@ function parseFileDiffs(statOutput: string): FileDiff[] {
     const insertions = match[1] === "-" ? 0 : parseInt(match[1]);
     const deletions = match[2] === "-" ? 0 : parseInt(match[2]);
     const path = match[3];
-
-    let status: FileDiff["status"] = "M";
-    if (insertions > 0 && deletions === 0) status = "A";
-    if (insertions === 0 && deletions > 0) status = "D";
+    const status = statusMap.get(path) ?? "M";
 
     files.push({ path, status, insertions, deletions });
   }
@@ -103,13 +110,14 @@ function parseFileDiffs(statOutput: string): FileDiff[] {
 }
 
 export async function getDiff(base: string, branch: string): Promise<DiffResult> {
-  const [rawResult, statResult, numstatResult] = await Promise.all([
+  const [rawResult, statResult, numstatResult, nameStatusResult] = await Promise.all([
     $`git diff ${base}...${branch}`.quiet().nothrow(),
     $`git diff ${base}...${branch} --stat`.quiet().nothrow(),
     $`git diff ${base}...${branch} --numstat`.quiet().nothrow(),
+    $`git diff ${base}...${branch} --name-status`.quiet().nothrow(),
   ]);
 
-  const files = parseFileDiffs(numstatResult.text());
+  const files = parseFileDiffs(numstatResult.text(), nameStatusResult.text());
   const summary = await getDiffStat(base, branch);
 
   return {

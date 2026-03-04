@@ -1,4 +1,5 @@
 import { discardWorktree } from "../core/git";
+import { readLine } from "./utils";
 
 export default async function discard() {
   const name = process.argv[3];
@@ -26,18 +27,4 @@ export default async function discard() {
     console.error(`\x1b[31m${result.message}\x1b[0m`);
     process.exit(1);
   }
-}
-
-async function readLine(): Promise<string> {
-  return new Promise((resolve) => {
-    let data = "";
-    process.stdin.setRawMode?.(false);
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-    process.stdin.once("data", (chunk: string) => {
-      data = chunk.trim();
-      process.stdin.pause();
-      resolve(data);
-    });
-  });
 }

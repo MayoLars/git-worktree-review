@@ -34,7 +34,7 @@ export default async function startServer(options?: { demo?: boolean }) {
       }
       const file = Bun.file(resolved);
       if (await file.exists()) {
-        return new Response(file);
+        return new Response(file, { headers: { ...SECURITY_HEADERS } });
       }
 
       return new Response("Not Found", { status: 404 });
@@ -129,6 +129,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
 };
 
 function json(data: any, status = 200): Response {

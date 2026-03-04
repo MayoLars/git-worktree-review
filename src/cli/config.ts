@@ -1,4 +1,5 @@
 import { loadConfig, saveConfig } from "../core/config";
+import { getFlag } from "./utils";
 
 export default async function config() {
   const portStr = getFlag("--port") ?? getFlag("-p");
@@ -20,9 +21,4 @@ export default async function config() {
   current.port = port;
   await saveConfig(current);
   console.log(`Saved port ${port} to .wtr.json`);
-}
-
-function getFlag(flag: string): string | undefined {
-  const idx = process.argv.indexOf(flag);
-  return idx !== -1 ? process.argv[idx + 1] : undefined;
 }

@@ -6,6 +6,16 @@ CLI + web tool for reviewing code changes made by LLMs (or humans) in git worktr
 
 When LLMs work in git worktrees, you need a fast way to review what they changed before merging. `wtr` gives you a summary-first workflow: see the commits, browse the diff, then merge or discard.
 
+## Highlights
+
+- **Zero build step** — Single HTML file with inline CSS/JS, no bundler or framework needed
+- **Localhost only** — Server binds to `127.0.0.1`, never exposed to the network
+- **CSRF protection** — State-changing endpoints require a custom header, blocking cross-origin attacks
+- **XSS-safe rendering** — All user input is escaped; no inline event handlers, Content-Security-Policy enforced
+- **Path traversal protection** — Static file serving validates resolved paths against the public directory
+- **Demo mode** — `wtr web --demo` runs without a git repo, useful for trying the UI
+- **Commit filter tabs** — Filter diffs by individual commit to review changes incrementally
+
 ## Install
 
 Requires [Bun](https://bun.sh).
@@ -106,9 +116,12 @@ src/
 │   ├── diff.ts    Colorized terminal diff
 │   ├── summary.ts AI summary via gh copilot (falls back to git stats)
 │   ├── merge.ts   Merge with confirmation prompt
-│   └── discard.ts Discard with confirmation prompt
+│   ├── discard.ts Discard with confirmation prompt
+│   ├── config.ts  Persistent repo config (port, etc.)
+│   └── utils.ts   Shared CLI helpers (getFlag, readLine)
 ├── core/          Shared git operations
 │   ├── git.ts     All git commands (worktree list, diff, merge, etc.)
+│   ├── config.ts  Config file loading/saving (.wtr.json)
 │   └── types.ts   TypeScript interfaces
 └── web/           Web UI
     ├── server.ts  Bun HTTP server with REST API
