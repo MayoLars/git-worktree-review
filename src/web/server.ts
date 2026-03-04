@@ -1,7 +1,7 @@
 import { getWorktrees, getBaseBranch, getDiff, getDiffStat, getCommitLog, mergeWorktree, discardWorktree } from "../core/git";
 import { loadConfig } from "../core/config";
 import type { WorktreeDetail, DiffResult } from "../core/types";
-import { join } from "path";
+import { join, resolve } from "path";
 
 export default async function startServer(options?: { demo?: boolean }) {
   const demo = options?.demo ?? false;
@@ -20,9 +20,13 @@ export default async function startServer(options?: { demo?: boolean }) {
         return demo ? handleDemoApi(req, path) : handleApi(req, path, url);
       }
 
-      // Static files
+      // Static files (resolve and verify path stays within publicDir)
       const filePath = path === "/" ? "/index.html" : path;
-      const file = Bun.file(join(publicDir, filePath));
+      const resolved = resolve(publicDir, filePath.slice(1));
+      if (!resolved.startsWith(publicDir)) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      const file = Bun.file(resolved);
       if (await file.exists()) {
         return new Response(file);
       }
@@ -110,14 +114,21 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
 
     return json({ error: "Not found" }, 404);
   } catch (err: any) {
-    return json({ error: err.message }, 500);
+    console.error("API error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
+
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+};
 
 function json(data: any, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...SECURITY_HEADERS },
   });
 }
 

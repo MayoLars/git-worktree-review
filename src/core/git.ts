@@ -14,7 +14,13 @@ export async function isGitRepo(cwd?: string): Promise<boolean> {
 }
 
 export async function getBaseBranch(override?: string): Promise<string> {
-  if (override) return override;
+  if (override) {
+    // Validate branch name to prevent injection
+    if (!/^[a-zA-Z0-9._\-/]+$/.test(override)) {
+      throw new Error("Invalid branch name.");
+    }
+    return override;
+  }
 
   // Check if 'main' exists
   const main = await $`git rev-parse --verify main`.quiet().nothrow();
