@@ -1,2 +1,928 @@
 <!DOCTYPE html>
-<html><body><h1>wt-review</h1><p>Web UI placeholder</p></body></html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wt-review</title>
+<style>
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --bg-hover: #30363d;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #484f58;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.15);
+    --red: #f85149;
+    --red-bg: rgba(248,81,73,0.15);
+    --yellow: #d29922;
+    --yellow-bg: rgba(210,153,34,0.15);
+    --blue: #58a6ff;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --radius: 6px;
+    --sidebar-width: 280px;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root.auto {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #eaeef2;
+      --bg-hover: #d0d7de;
+      --border: #d0d7de;
+      --text-primary: #1f2328;
+      --text-secondary: #656d76;
+      --text-muted: #8c959f;
+      --green-bg: rgba(63,185,80,0.1);
+      --red-bg: rgba(248,81,73,0.1);
+      --yellow-bg: rgba(210,153,34,0.1);
+    }
+  }
+
+  :root.light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f8fa;
+    --bg-tertiary: #eaeef2;
+    --bg-hover: #d0d7de;
+    --border: #d0d7de;
+    --text-primary: #1f2328;
+    --text-secondary: #656d76;
+    --text-muted: #8c959f;
+    --green-bg: rgba(63,185,80,0.1);
+    --red-bg: rgba(248,81,73,0.1);
+    --yellow-bg: rgba(210,153,34,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .topbar h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .topbar h1 span { color: var(--accent); }
+
+  .theme-toggle {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-sans);
+    transition: background 0.15s;
+  }
+
+  .theme-toggle:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+  /* Main layout */
+  .main-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+  }
+
+  .sidebar-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+  }
+
+  .wt-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: background 0.12s;
+    gap: 10px;
+  }
+
+  .wt-item:hover { background: var(--bg-tertiary); }
+  .wt-item.active { background: var(--bg-tertiary); border: 1px solid var(--border); }
+
+  .wt-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .wt-item.active .wt-indicator { background: var(--accent); }
+
+  .wt-info { flex: 1; min-width: 0; }
+
+  .wt-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wt-stats {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-family: var(--font-mono);
+  }
+
+  .wt-stats .plus { color: var(--green); }
+  .wt-stats .minus { color: var(--red); }
+
+  .wt-badge {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  /* Content area */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+  }
+
+  .content-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .content-header {
+    margin-bottom: 20px;
+  }
+
+  .content-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .branch-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .diff-summary {
+    display: flex;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+
+  .diff-summary .stat { color: var(--text-secondary); }
+  .diff-summary .stat strong { color: var(--text-primary); font-weight: 600; }
+
+  /* Files list */
+  .files-section {
+    margin-bottom: 24px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    border-radius: 4px;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .file-row:hover { background: var(--bg-secondary); }
+
+  .file-status {
+    font-weight: 700;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .file-status.A { color: var(--green); }
+  .file-status.M { color: var(--yellow); }
+  .file-status.D { color: var(--red); }
+  .file-status.R { color: var(--blue); }
+
+  .file-path {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-changes {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .file-changes .plus { color: var(--green); }
+  .file-changes .minus { color: var(--red); }
+
+  /* Diff view */
+  .diff-section { margin-bottom: 24px; }
+
+  .diff-file {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .diff-file-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    user-select: none;
+    gap: 8px;
+  }
+
+  .diff-file-header:hover { background: var(--bg-tertiary); }
+
+  .diff-chevron {
+    color: var(--text-muted);
+    font-size: 10px;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+
+  .diff-file.collapsed .diff-chevron { transform: rotate(-90deg); }
+  .diff-file.collapsed .diff-file-body { display: none; }
+
+  .diff-file-name { flex: 1; color: var(--text-primary); font-weight: 500; }
+
+  .diff-file-stats {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .diff-file-stats .plus { color: var(--green); }
+  .diff-file-stats .minus { color: var(--red); }
+
+  .diff-file-body { overflow-x: auto; }
+
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .diff-table td {
+    padding: 0 12px;
+    white-space: pre;
+    vertical-align: top;
+  }
+
+  .diff-line-num {
+    width: 50px;
+    min-width: 50px;
+    text-align: right;
+    color: var(--text-muted);
+    user-select: none;
+    padding-right: 8px;
+    border-right: 1px solid var(--border);
+  }
+
+  .diff-line-content {
+    padding-left: 16px;
+  }
+
+  tr.diff-add { background: var(--green-bg); }
+  tr.diff-add .diff-line-content { color: var(--green); }
+  tr.diff-del { background: var(--red-bg); }
+  tr.diff-del .diff-line-content { color: var(--red); }
+  tr.diff-hunk { background: var(--bg-secondary); }
+  tr.diff-hunk td { color: var(--accent); padding: 4px 12px; font-weight: 500; }
+  tr.diff-ctx .diff-line-content { color: var(--text-secondary); }
+
+  /* Bottom bar */
+  .bottom-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .bottom-bar.hidden { display: none; }
+
+  .btn {
+    padding: 7px 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-merge {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+
+  .btn-merge:hover:not(:disabled) { background: #2ea043; border-color: #2ea043; }
+
+  .btn-discard {
+    background: transparent;
+    color: var(--red);
+    border-color: var(--red);
+  }
+
+  .btn-discard:hover:not(:disabled) { background: var(--red-bg); }
+
+  .bottom-message {
+    flex: 1;
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* Loading & error states */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    color: var(--text-muted);
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-banner {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+
+  /* Confirm dialog overlay */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .dialog-overlay.hidden { display: none; }
+
+  .dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  }
+
+  .dialog h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .dialog p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .dialog-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .btn-cancel {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+
+  .btn-cancel:hover { background: var(--bg-hover); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><span>wt</span>-review</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
+</div>
+
+<div class="main-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">Worktrees</div>
+    <div class="sidebar-list" id="sidebarList">
+      <div class="loading"><div class="spinner"></div> Loading...</div>
+    </div>
+  </aside>
+
+  <main class="content" id="content">
+    <div class="content-empty">Select a worktree to view changes</div>
+  </main>
+</div>
+
+<div class="bottom-bar hidden" id="bottomBar">
+  <button class="btn btn-merge" id="mergeBtn" onclick="confirmAction('merge')">Merge</button>
+  <button class="btn btn-discard" id="discardBtn" onclick="confirmAction('discard')">Discard</button>
+  <div class="bottom-message" id="bottomMsg"></div>
+</div>
+
+<div class="dialog-overlay hidden" id="dialogOverlay">
+  <div class="dialog">
+    <h3 id="dialogTitle">Confirm</h3>
+    <p id="dialogText"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-cancel" onclick="closeDialog()">Cancel</button>
+      <button class="btn" id="dialogConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // State
+  let worktrees = [];
+  let selectedWt = null;
+  let currentDiff = null;
+  let refreshTimer = null;
+  let currentTheme = 'dark';
+
+  // Theme management
+  window.toggleTheme = function() {
+    const html = document.documentElement;
+    if (currentTheme === 'dark') {
+      html.className = 'light';
+      currentTheme = 'light';
+      document.getElementById('themeBtn').textContent = 'Light';
+    } else {
+      html.className = '';
+      currentTheme = 'dark';
+      document.getElementById('themeBtn').textContent = 'Dark';
+    }
+  };
+
+  // Detect system preference on load
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.className = 'auto';
+    currentTheme = 'light';
+    document.getElementById('themeBtn').textContent = 'Light';
+  }
+
+  // API helpers
+  async function api(path, method = 'GET') {
+    const res = await fetch(path, { method });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  }
+
+  // Fetch worktrees
+  async function fetchWorktrees() {
+    try {
+      worktrees = await api('/api/worktrees');
+      renderSidebar();
+      // If selected worktree no longer exists, deselect
+      if (selectedWt && !worktrees.find(w => w.name === selectedWt.name)) {
+        selectedWt = null;
+        currentDiff = null;
+        renderContent();
+      }
+    } catch (err) {
+      document.getElementById('sidebarList').innerHTML =
+        `<div class="error-banner">${esc(err.message)}</div>`;
+    }
+  }
+
+  // Render sidebar
+  function renderSidebar() {
+    const list = document.getElementById('sidebarList');
+    if (worktrees.length === 0) {
+      list.innerHTML = '<div class="loading" style="color:var(--text-muted)">No worktrees found</div>';
+      return;
+    }
+
+    list.innerHTML = worktrees.map(wt => {
+      const active = selectedWt && selectedWt.name === wt.name;
+      const ins = wt.stat?.insertions ?? 0;
+      const del = wt.stat?.deletions ?? 0;
+      const fileCount = wt.files?.length ?? 0;
+      return `
+        <div class="wt-item${active ? ' active' : ''}" onclick="selectWorktree('${esc(wt.name)}')" title="${esc(wt.branch)}">
+          <div class="wt-indicator"></div>
+          <div class="wt-info">
+            <div class="wt-name">${esc(wt.name)}</div>
+            <div class="wt-stats"><span class="plus">+${ins}</span> <span class="minus">-${del}</span></div>
+          </div>
+          <span class="wt-badge">${fileCount}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // Select a worktree
+  window.selectWorktree = async function(name) {
+    selectedWt = worktrees.find(w => w.name === name);
+    if (!selectedWt) return;
+
+    renderSidebar();
+    renderContent('<div class="loading"><div class="spinner"></div> Loading diff...</div>');
+    document.getElementById('bottomBar').classList.remove('hidden');
+    document.getElementById('bottomMsg').textContent = '';
+
+    try {
+      currentDiff = await api(`/api/worktree/${encodeURIComponent(name)}/diff`);
+      renderDiffView();
+    } catch (err) {
+      renderContent(`<div class="error-banner">${esc(err.message)}</div>`);
+    }
+  };
+
+  // Render main content area
+  function renderContent(html) {
+    const el = document.getElementById('content');
+    if (html !== undefined) { el.innerHTML = html; return; }
+
+    if (!selectedWt) {
+      el.innerHTML = '<div class="content-empty">Select a worktree to view changes</div>';
+      document.getElementById('bottomBar').classList.add('hidden');
+    }
+  }
+
+  // Render the full diff view
+  function renderDiffView() {
+    if (!selectedWt || !currentDiff) return;
+    const wt = selectedWt;
+    const diff = currentDiff;
+    const summary = diff.summary || wt.stat || {};
+    const files = diff.files || wt.files || [];
+
+    let html = '';
+
+    // Header
+    html += `<div class="content-header">
+      <h2>${esc(wt.name)}</h2>
+      <div class="branch-info">${esc(wt.branch)}</div>
+    </div>`;
+
+    // Diff stats summary
+    html += `<div class="diff-summary">
+      <span class="stat"><strong>${summary.filesChanged ?? files.length}</strong> files changed</span>
+      <span class="stat"><span class="plus">+${summary.insertions ?? 0}</span> insertions</span>
+      <span class="stat"><span class="minus">-${summary.deletions ?? 0}</span> deletions</span>
+    </div>`;
+
+    // Changed files list
+    html += '<div class="files-section"><div class="section-title">Changed Files</div>';
+    for (const f of files) {
+      const insStr = f.insertions > 0 ? `<span class="plus">+${f.insertions}</span>` : '';
+      const delStr = f.deletions > 0 ? `<span class="minus">-${f.deletions}</span>` : '';
+      html += `<div class="file-row" onclick="scrollToFile('${esc(f.path)}')">
+        <span class="file-status ${f.status}">${f.status}</span>
+        <span class="file-path">${esc(f.path)}</span>
+        <span class="file-changes">${insStr} ${delStr}</span>
+      </div>`;
+    }
+    html += '</div>';
+
+    // Diff content
+    if (diff.raw) {
+      html += '<div class="diff-section"><div class="section-title">Diff</div>';
+      html += renderRawDiff(diff.raw, files);
+      html += '</div>';
+    }
+
+    document.getElementById('content').innerHTML = html;
+  }
+
+  // Parse and render raw unified diff
+  function renderRawDiff(raw, files) {
+    const fileChunks = splitDiffByFile(raw);
+    let html = '';
+
+    for (const chunk of fileChunks) {
+      const fileInfo = files.find(f => chunk.path.includes(f.path));
+      const status = fileInfo ? fileInfo.status : 'M';
+      const ins = fileInfo?.insertions ?? 0;
+      const del = fileInfo?.deletions ?? 0;
+      const statsHtml = [
+        ins > 0 ? `<span class="plus">+${ins}</span>` : '',
+        del > 0 ? `<span class="minus">-${del}</span>` : ''
+      ].filter(Boolean).join(' ');
+
+      html += `<div class="diff-file" id="file-${cssId(chunk.path)}">
+        <div class="diff-file-header" onclick="toggleFile(this)">
+          <span class="diff-chevron">&#9660;</span>
+          <span class="file-status ${status}">${status}</span>
+          <span class="diff-file-name">${esc(chunk.path)}</span>
+          <span class="diff-file-stats">${statsHtml}</span>
+        </div>
+        <div class="diff-file-body">
+          <table class="diff-table">${renderDiffLines(chunk.lines)}</table>
+        </div>
+      </div>`;
+    }
+
+    return html;
+  }
+
+  // Split raw diff text into per-file chunks
+  function splitDiffByFile(raw) {
+    const chunks = [];
+    const lines = raw.split('\n');
+    let current = null;
+
+    for (const line of lines) {
+      if (line.startsWith('diff --git')) {
+        if (current) chunks.push(current);
+        // Extract filename from "diff --git a/path b/path"
+        const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+        const path = match ? match[2] : 'unknown';
+        current = { path, lines: [] };
+      } else if (current) {
+        // Skip binary file notices and index lines for cleaner display
+        if (line.startsWith('index ') || line.startsWith('Binary files')) {
+          current.lines.push({ type: 'meta', text: line });
+        } else {
+          current.lines.push(classifyLine(line));
+        }
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  }
+
+  // Classify a diff line
+  function classifyLine(line) {
+    if (line.startsWith('@@')) return { type: 'hunk', text: line };
+    if (line.startsWith('--- ') || line.startsWith('+++ ')) return { type: 'meta', text: line };
+    if (line.startsWith('+')) return { type: 'add', text: line };
+    if (line.startsWith('-')) return { type: 'del', text: line };
+    return { type: 'ctx', text: line };
+  }
+
+  // Render classified diff lines as table rows
+  function renderDiffLines(lines) {
+    let html = '';
+    let oldNum = 0, newNum = 0;
+
+    for (const l of lines) {
+      if (l.type === 'meta') continue;
+
+      if (l.type === 'hunk') {
+        const match = l.text.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)/);
+        if (match) {
+          oldNum = parseInt(match[1]) - 1;
+          newNum = parseInt(match[2]) - 1;
+          const context = match[3] || '';
+          html += `<tr class="diff-hunk"><td colspan="3">${esc(l.text)}</td></tr>`;
+        }
+        continue;
+      }
+
+      const cls = l.type === 'add' ? 'diff-add' : l.type === 'del' ? 'diff-del' : 'diff-ctx';
+      let leftNum = '', rightNum = '';
+
+      if (l.type === 'add') {
+        newNum++;
+        rightNum = newNum;
+      } else if (l.type === 'del') {
+        oldNum++;
+        leftNum = oldNum;
+      } else {
+        oldNum++;
+        newNum++;
+        leftNum = oldNum;
+        rightNum = newNum;
+      }
+
+      html += `<tr class="${cls}">
+        <td class="diff-line-num">${leftNum}</td>
+        <td class="diff-line-num">${rightNum}</td>
+        <td class="diff-line-content">${esc(l.text)}</td>
+      </tr>`;
+    }
+    return html;
+  }
+
+  // Toggle file collapse
+  window.toggleFile = function(header) {
+    header.parentElement.classList.toggle('collapsed');
+  };
+
+  // Scroll to file in diff
+  window.scrollToFile = function(path) {
+    const el = document.getElementById('file-' + cssId(path));
+    if (el) {
+      el.classList.remove('collapsed');
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Confirm action dialog
+  let pendingAction = null;
+
+  window.confirmAction = function(action) {
+    if (!selectedWt) return;
+    pendingAction = action;
+    const overlay = document.getElementById('dialogOverlay');
+    const title = document.getElementById('dialogTitle');
+    const text = document.getElementById('dialogText');
+    const confirmBtn = document.getElementById('dialogConfirm');
+
+    if (action === 'merge') {
+      title.textContent = 'Confirm Merge';
+      text.textContent = `Merge branch "${selectedWt.branch}" into the base branch and remove the worktree? This action cannot be undone.`;
+      confirmBtn.textContent = 'Merge';
+      confirmBtn.className = 'btn btn-merge';
+    } else {
+      title.textContent = 'Confirm Discard';
+      text.textContent = `Discard worktree "${selectedWt.name}" and delete branch "${selectedWt.branch}"? All uncommitted changes will be lost.`;
+      confirmBtn.textContent = 'Discard';
+      confirmBtn.className = 'btn btn-discard';
+    }
+
+    confirmBtn.onclick = () => executeAction(action);
+    overlay.classList.remove('hidden');
+  };
+
+  window.closeDialog = function() {
+    document.getElementById('dialogOverlay').classList.add('hidden');
+    pendingAction = null;
+  };
+
+  async function executeAction(action) {
+    closeDialog();
+    if (!selectedWt) return;
+
+    const name = selectedWt.name;
+    const mergeBtn = document.getElementById('mergeBtn');
+    const discardBtn = document.getElementById('discardBtn');
+    const msg = document.getElementById('bottomMsg');
+
+    mergeBtn.disabled = true;
+    discardBtn.disabled = true;
+    msg.textContent = action === 'merge' ? 'Merging...' : 'Discarding...';
+    msg.style.color = 'var(--text-secondary)';
+
+    try {
+      const result = await api(`/api/worktree/${encodeURIComponent(name)}/${action}`, 'POST');
+      msg.textContent = result.message || 'Done.';
+      msg.style.color = 'var(--green)';
+
+      // Refresh
+      selectedWt = null;
+      currentDiff = null;
+      await fetchWorktrees();
+      renderContent();
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.style.color = 'var(--red)';
+    } finally {
+      mergeBtn.disabled = false;
+      discardBtn.disabled = false;
+    }
+  }
+
+  // Utilities
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
+  }
+
+  function cssId(path) {
+    return path.replace(/[^a-zA-Z0-9-_]/g, '-');
+  }
+
+  // Close dialog on overlay click
+  document.getElementById('dialogOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeDialog();
+  });
+
+  // Close dialog on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDialog();
+  });
+
+  // Initialize
+  fetchWorktrees();
+  refreshTimer = setInterval(fetchWorktrees, 30000);
+})();
+</script>
+</body>
+</html>
