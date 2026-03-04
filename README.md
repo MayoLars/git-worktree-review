@@ -75,6 +75,8 @@ wtr diff <name> --base develop
 
 ## Web UI
 
+![wtr web demo](img/web-demo.png)
+
 `wtr web` starts a local server on port 3000 (configurable via `PORT` env var or `wtr config`).
 
 ### Configure port
