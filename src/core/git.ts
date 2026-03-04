@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import type { Worktree } from "./types";
+import type { Worktree, DiffStat, FileDiff, DiffResult } from "./types";
 
 export async function isGitRepo(cwd?: string): Promise<boolean> {
   try {
@@ -54,4 +54,82 @@ export async function getWorktrees(): Promise<Worktree[]> {
   }
 
   return worktrees;
+}
+
+export async function getDiffStat(base: string, branch: string): Promise<DiffStat> {
+  const result = await $`git diff ${base}...${branch} --shortstat`.quiet().nothrow();
+  const text = result.text().trim();
+
+  if (!text) return { filesChanged: 0, insertions: 0, deletions: 0 };
+
+  const filesMatch = text.match(/(\d+) file/);
+  const insertMatch = text.match(/(\d+) insertion/);
+  const deleteMatch = text.match(/(\d+) deletion/);
+
+  return {
+    filesChanged: filesMatch ? parseInt(filesMatch[1]) : 0,
+    insertions: insertMatch ? parseInt(insertMatch[1]) : 0,
+    deletions: deleteMatch ? parseInt(deleteMatch[1]) : 0,
+  };
+}
+
+function parseFileDiffs(statOutput: string): FileDiff[] {
+  const files: FileDiff[] = [];
+  const lines = statOutput.trim().split("\n");
+
+  for (const line of lines) {
+    // Format: "insertions\tdeletions\tfilepath"
+    const match = line.match(/^(\d+|-)\t(\d+|-)\t(.+)$/);
+    if (!match) continue;
+
+    const insertions = match[1] === "-" ? 0 : parseInt(match[1]);
+    const deletions = match[2] === "-" ? 0 : parseInt(match[2]);
+    const path = match[3];
+
+    let status: FileDiff["status"] = "M";
+    if (insertions > 0 && deletions === 0) status = "A";
+    if (insertions === 0 && deletions > 0) status = "D";
+
+    files.push({ path, status, insertions, deletions });
+  }
+
+  return files;
+}
+
+export async function getDiff(base: string, branch: string): Promise<DiffResult> {
+  const [rawResult, statResult, numstatResult] = await Promise.all([
+    $`git diff ${base}...${branch}`.quiet().nothrow(),
+    $`git diff ${base}...${branch} --stat`.quiet().nothrow(),
+    $`git diff ${base}...${branch} --numstat`.quiet().nothrow(),
+  ]);
+
+  const files = parseFileDiffs(numstatResult.text());
+  const summary = await getDiffStat(base, branch);
+
+  return {
+    raw: rawResult.text(),
+    stat: statResult.text(),
+    files,
+    summary,
+  };
+}
+
+export async function getFileStatuses(base: string, branch: string): Promise<FileDiff[]> {
+  const result = await $`git diff ${base}...${branch} --name-status`.quiet().nothrow();
+  const lines = result.text().trim().split("\n");
+  const files: FileDiff[] = [];
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const [statusChar, ...pathParts] = line.split("\t");
+    const path = pathParts.join("\t");
+    let status: FileDiff["status"] = "M";
+    if (statusChar?.startsWith("A")) status = "A";
+    else if (statusChar?.startsWith("D")) status = "D";
+    else if (statusChar?.startsWith("R")) status = "R";
+
+    files.push({ path, status, insertions: 0, deletions: 0 });
+  }
+
+  return files;
 }
