@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>wt-review</title>
+<title>wtr</title>
 <style>
   :root {
     --bg-primary: #0d1117;
@@ -280,6 +280,53 @@
     font-family: var(--font-mono);
   }
 
+  /* Commit tabs */
+  .commit-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .commit-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .commit-tab:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+  .commit-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .commit-tab .tab-hash {
+    font-weight: 600;
+    color: var(--yellow);
+  }
+
+  .commit-tab.active .tab-hash {
+    color: #fff;
+  }
+
+  .commit-tab .tab-subject {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* Files list */
   .files-section {
     margin-bottom: 24px;
@@ -521,7 +568,7 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 24px;
-    max-width: 400px;
+    max-width: 620px;
     width: 90%;
     box-shadow: 0 16px 48px rgba(0,0,0,0.4);
   }
@@ -562,7 +609,7 @@
 <body>
 
 <div class="topbar">
-  <h1><span>wt</span>-review</h1>
+  <h1><span>wtr</span> — git-worktree-review</h1>
   <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
 </div>
 
@@ -600,10 +647,12 @@
 (function() {
   // State
   let worktrees = [];
+  let baseBranch = 'main';
   let selectedWt = null;
   let currentDiff = null;
   let refreshTimer = null;
   let currentTheme = 'dark';
+  let activeCommitFilter = null; // null = 'All', or commit hash
 
   // Theme management
   window.toggleTheme = function() {
@@ -637,7 +686,9 @@
   // Fetch worktrees
   async function fetchWorktrees() {
     try {
-      worktrees = await api('/api/worktrees');
+      const data = await api('/api/worktrees');
+      worktrees = data.worktrees;
+      baseBranch = data.baseBranch || 'main';
       renderSidebar();
       // If selected worktree no longer exists, deselect
       if (selectedWt && !worktrees.find(w => w.name === selectedWt.name)) {
@@ -680,6 +731,7 @@
   window.selectWorktree = async function(name) {
     selectedWt = worktrees.find(w => w.name === name);
     if (!selectedWt) return;
+    activeCommitFilter = null;
 
     renderSidebar();
     renderContent('<div class="loading"><div class="spinner"></div> Loading diff...</div>');
@@ -712,6 +764,7 @@
     const diff = currentDiff;
     const summary = diff.summary || wt.stat || {};
     const files = diff.files || wt.files || [];
+    const commits = wt.commits || [];
 
     let html = '';
 
@@ -728,8 +781,7 @@
       <span class="stat"><span class="minus">-${summary.deletions ?? 0}</span> deletions</span>
     </div>`;
 
-    // Commits
-    const commits = wt.commits || [];
+    // Commits section with details
     if (commits.length > 0) {
       html += `<div class="commits-section"><div class="section-title">Commits (${commits.length})</div>`;
       for (const c of commits) {
@@ -744,9 +796,32 @@
       html += '</div>';
     }
 
+    // Commit filter tabs (only when multiple commits)
+    if (commits.length > 1) {
+      html += '<div class="commit-tabs">';
+      html += `<span class="commit-tab${!activeCommitFilter ? ' active' : ''}" onclick="filterByCommit(null)">All</span>`;
+      for (const c of commits) {
+        const isActive = activeCommitFilter === c.shortHash;
+        html += `<span class="commit-tab${isActive ? ' active' : ''}" onclick="filterByCommit('${esc(c.shortHash)}')" title="${esc(c.subject)}">
+          <span class="tab-hash">${esc(c.shortHash)}</span>
+          <span class="tab-subject">${esc(c.subject)}</span>
+        </span>`;
+      }
+      html += '</div>';
+    }
+
+    // Filter diff by commit if active
+    const rawDiff = diff.raw || '';
+    const filteredDiff = activeCommitFilter && diff.commitDiffs
+      ? (diff.commitDiffs[activeCommitFilter] || '')
+      : rawDiff;
+    const filteredFiles = activeCommitFilter && diff.commitFiles
+      ? (diff.commitFiles[activeCommitFilter] || files)
+      : files;
+
     // Changed files list
     html += '<div class="files-section"><div class="section-title">Changed Files</div>';
-    for (const f of files) {
+    for (const f of filteredFiles) {
       const insStr = f.insertions > 0 ? `<span class="plus">+${f.insertions}</span>` : '';
       const delStr = f.deletions > 0 ? `<span class="minus">-${f.deletions}</span>` : '';
       html += `<div class="file-row" onclick="scrollToFile('${esc(f.path)}')">
@@ -758,14 +833,20 @@
     html += '</div>';
 
     // Diff content
-    if (diff.raw) {
+    if (filteredDiff) {
       html += '<div class="diff-section"><div class="section-title">Diff</div>';
-      html += renderRawDiff(diff.raw, files);
+      html += renderRawDiff(filteredDiff, filteredFiles);
       html += '</div>';
     }
 
     document.getElementById('content').innerHTML = html;
   }
+
+  // Filter by commit tab
+  window.filterByCommit = function(shortHash) {
+    activeCommitFilter = shortHash;
+    renderDiffView();
+  };
 
   // Parse and render raw unified diff
   function renderRawDiff(raw, files) {
@@ -902,14 +983,30 @@
     const text = document.getElementById('dialogText');
     const confirmBtn = document.getElementById('dialogConfirm');
 
+    const codeStyle = 'display:block;background:var(--bg-tertiary);padding:10px 12px;border-radius:4px;font-size:12px;font-family:var(--font-mono);line-height:2;color:var(--text-secondary)';
+    const b = esc(selectedWt.branch);
+    const p = esc(selectedWt.path);
+
+    const n = esc(selectedWt.name);
+
     if (action === 'merge') {
-      title.textContent = 'Confirm Merge';
-      text.textContent = `Merge branch "${selectedWt.branch}" into the base branch and remove the worktree? This action cannot be undone.`;
+      title.innerHTML = `Confirm Merge — <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:14px">wtr merge ${n}</code>`;
+      text.innerHTML = `<p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;line-height:1.5">Merge branch <strong style="color:var(--text-primary)">${b}</strong> into <strong style="color:var(--text-primary)">${esc(baseBranch)}</strong> and remove the worktree. This action cannot be undone.</p>`
+        + `<code style="${codeStyle}">`
+        + `<strong style="color:var(--text-primary)">1.</strong> git merge ${b} --no-edit <span style="color:var(--text-muted)">— merges the worktree's branch into the current branch</span><br>`
+        + `<strong style="color:var(--text-primary)">2.</strong> <span style="color:var(--text-muted)">If conflict:</span> git merge --abort <span style="color:var(--text-muted)">— returns an error with manual resolution instructions</span><br>`
+        + `<strong style="color:var(--text-primary)">3.</strong> <span style="color:var(--text-muted)">On success:</span> git worktree remove ${p} <span style="color:var(--text-muted)">— removes the worktree directory</span><br>`
+        + `<strong style="color:var(--text-primary)">4.</strong> git branch -d ${b} <span style="color:var(--text-muted)">— deletes the branch (safe delete, only if fully merged)</span>`
+        + `</code>`;
       confirmBtn.textContent = 'Merge';
       confirmBtn.className = 'btn btn-merge';
     } else {
-      title.textContent = 'Confirm Discard';
-      text.textContent = `Discard worktree "${selectedWt.name}" and delete branch "${selectedWt.branch}"? All uncommitted changes will be lost.`;
+      title.innerHTML = `Confirm Discard — <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:14px">wtr discard ${n}</code>`;
+      text.innerHTML = `<p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;line-height:1.5">Discard worktree <strong style="color:var(--text-primary)">${n}</strong> and delete branch <strong style="color:var(--text-primary)">${b}</strong>. All uncommitted changes will be lost.</p>`
+        + `<code style="${codeStyle}">`
+        + `<strong style="color:var(--text-primary)">1.</strong> git worktree remove ${p} --force <span style="color:var(--text-muted)">— removes the worktree directory (force to handle uncommitted changes)</span><br>`
+        + `<strong style="color:var(--text-primary)">2.</strong> git branch -D ${b} <span style="color:var(--text-muted)">— force-deletes the branch regardless of merge status</span>`
+        + `</code>`;
       confirmBtn.textContent = 'Discard';
       confirmBtn.className = 'btn btn-discard';
     }

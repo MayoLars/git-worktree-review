@@ -3,7 +3,7 @@ import { discardWorktree } from "../core/git";
 export default async function discard() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review discard <worktree-name>");
+    console.error("Usage: wtr discard <worktree-name>");
     process.exit(1);
   }
 

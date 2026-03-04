@@ -1,4 +1,4 @@
-# wt-review Implementation Plan
+# wtr Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -38,11 +38,11 @@ bun init -y
 
 ```json
 {
-  "name": "wt-review",
+  "name": "wtr",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "wt-review": "./src/cli/index.ts"
+    "wtr": "./src/cli/index.ts"
   },
   "scripts": {
     "dev": "bun run src/cli/index.ts",
@@ -498,9 +498,9 @@ async function main() {
 
   if (!command || command === "--help" || command === "-h") {
     console.log(`
-wt-review — Git Worktree Review Tool
+wtr — Git Worktree Review Tool
 
-Usage: wt-review <command> [options]
+Usage: wtr <command> [options]
 
 Commands:
   status              List all worktrees with diff stats
@@ -525,7 +525,7 @@ Options:
   const handler = commands[command];
   if (!handler) {
     console.error(`Unknown command: ${command}`);
-    console.error('Run "wt-review --help" for usage.');
+    console.error('Run "wtr --help" for usage.');
     process.exit(1);
   }
 
@@ -630,7 +630,7 @@ import { $ } from "bun";
 export default async function diff() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review diff <worktree-name>");
+    console.error("Usage: wtr diff <worktree-name>");
     process.exit(1);
   }
 
@@ -639,7 +639,7 @@ export default async function diff() {
   const wt = worktrees.find((w) => w.name === name);
 
   if (!wt) {
-    console.error(`Worktree '${name}' not found. Run 'wt-review status' to see available worktrees.`);
+    console.error(`Worktree '${name}' not found. Run 'wtr status' to see available worktrees.`);
     process.exit(1);
   }
 
@@ -674,7 +674,7 @@ import { $ } from "bun";
 export default async function summary() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review summary <worktree-name>");
+    console.error("Usage: wtr summary <worktree-name>");
     process.exit(1);
   }
 
@@ -683,7 +683,7 @@ export default async function summary() {
   const wt = worktrees.find((w) => w.name === name);
 
   if (!wt) {
-    console.error(`Worktree '${name}' not found. Run 'wt-review status' to see available worktrees.`);
+    console.error(`Worktree '${name}' not found. Run 'wtr status' to see available worktrees.`);
     process.exit(1);
   }
 
@@ -727,7 +727,7 @@ import { mergeWorktree, getBaseBranch } from "../core/git";
 export default async function merge() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review merge <worktree-name>");
+    console.error("Usage: wtr merge <worktree-name>");
     process.exit(1);
   }
 
@@ -780,7 +780,7 @@ import { discardWorktree } from "../core/git";
 export default async function discard() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review discard <worktree-name>");
+    console.error("Usage: wtr discard <worktree-name>");
     process.exit(1);
   }
 
@@ -875,7 +875,7 @@ export default async function startServer() {
     },
   });
 
-  console.log(`wt-review web UI running at http://localhost:${server.port}`);
+  console.log(`wtr web UI running at http://localhost:${server.port}`);
   console.log("Press Ctrl+C to stop.\n");
 }
 
@@ -998,7 +998,7 @@ Create `src/web/public/index.html` — a self-contained HTML file with embedded 
 - Loading states and error handling
 
 Key UI elements:
-- Header bar with "wt-review" title
+- Header bar with "wtr" title
 - Sidebar: list of worktrees with file count and +/- stats as badges
 - Main content: selected worktree details
 - File list as clickable items that expand to show the diff for that file
@@ -1033,14 +1033,14 @@ Run: `chmod +x src/cli/index.ts`
 **Step 2: Link globally**
 
 Run: `bun link`
-Expected: `wt-review` command is now available globally
+Expected: `wtr` command is now available globally
 
 **Step 3: Test global command**
 
-Run: `wt-review --help`
+Run: `wtr --help`
 Expected: Shows help text
 
-Run: `wt-review status`
+Run: `wtr status`
 Expected: Shows worktree list or "no additional worktrees" message
 
 **Step 4: Commit**
@@ -1072,14 +1072,14 @@ cd /home/mayolars/git-diff-tool
 
 **Step 3: Test all CLI commands**
 
-Run: `wt-review status` — should show test-feature worktree
-Run: `wt-review diff test-feature` — should show the diff
-Run: `wt-review summary test-feature` — should show summary or git stats
-Run: `wt-review web` — should start web UI, verify in browser
+Run: `wtr status` — should show test-feature worktree
+Run: `wtr diff test-feature` — should show the diff
+Run: `wtr summary test-feature` — should show summary or git stats
+Run: `wtr web` — should start web UI, verify in browser
 
 **Step 4: Test merge**
 
-Run: `wt-review merge test-feature` — should merge and clean up
+Run: `wtr merge test-feature` — should merge and clean up
 
 **Step 5: Clean up**
 

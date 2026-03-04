@@ -23,6 +23,7 @@ export interface FileDiff {
 export interface WorktreeDetail extends Worktree {
   stat: DiffStat;
   files: FileDiff[];
+  commits?: import("./git").CommitInfo[];
 }
 
 export interface DiffResult {

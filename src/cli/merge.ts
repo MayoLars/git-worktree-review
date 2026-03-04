@@ -3,7 +3,7 @@ import { mergeWorktree } from "../core/git";
 export default async function merge() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review merge <worktree-name>");
+    console.error("Usage: wtr merge <worktree-name>");
     process.exit(1);
   }
 

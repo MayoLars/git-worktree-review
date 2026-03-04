@@ -4,7 +4,7 @@ import { $ } from "bun";
 export default async function diff() {
   const name = process.argv[3];
   if (!name) {
-    console.error("Usage: wt-review diff <worktree-name>");
+    console.error("Usage: wtr diff <worktree-name>");
     process.exit(1);
   }
 
@@ -13,7 +13,7 @@ export default async function diff() {
   const wt = worktrees.find((w) => w.name === name);
 
   if (!wt) {
-    console.error(`Worktree '${name}' not found. Run 'wt-review status' to see available worktrees.`);
+    console.error(`Worktree '${name}' not found. Run 'wtr status' to see available worktrees.`);
     process.exit(1);
   }
 

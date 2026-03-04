@@ -1,4 +1,4 @@
-# wt-review — Git Worktree Review Tool
+# wtr — Git Worktree Review Tool
 
 ## Purpose
 
@@ -9,7 +9,7 @@ CLI + web tool for reviewing code changes made by LLMs in git worktrees. Provide
 Unified TypeScript/Bun tool with two interfaces sharing a common core.
 
 ```
-wt-review/
+wtr/
 ├── src/
 │   ├── cli/           # CLI entry point + commands
 │   │   ├── index.ts   # Command router
@@ -37,18 +37,18 @@ Key decisions:
 
 | Command | Description |
 |---------|-------------|
-| `wt-review status` | List all worktrees with branch, diff stats, status |
-| `wt-review summary <name>` | AI summary via `gh copilot explain` |
-| `wt-review diff <name>` | Colorized terminal diff for a worktree |
-| `wt-review merge <name>` | Merge worktree branch, clean up worktree |
-| `wt-review discard <name>` | Remove worktree + optionally delete branch |
-| `wt-review web` | Start web UI on localhost |
+| `wtr status` | List all worktrees with branch, diff stats, status |
+| `wtr summary <name>` | AI summary via `gh copilot explain` |
+| `wtr diff <name>` | Colorized terminal diff for a worktree |
+| `wtr merge <name>` | Merge worktree branch, clean up worktree |
+| `wtr discard <name>` | Remove worktree + optionally delete branch |
+| `wtr web` | Start web UI on localhost |
 
 `<name>` = worktree name. Auto-discovered via `git worktree list`.
 
 ## Web UI
 
-Served by `wt-review web` on `localhost:3000`.
+Served by `wtr web` on `localhost:3000`.
 
 Layout:
 - Left sidebar: worktree list
@@ -77,7 +77,7 @@ API endpoints:
 - Not in git repo → clear error message
 - `gh copilot` unavailable → skip AI summary, show git stats with note
 - Merge conflicts → abort, show conflicts, instruct manual resolution
-- Missing worktree → error with `wt-review status` hint
+- Missing worktree → error with `wtr status` hint
 
 ## Base Branch Detection
 

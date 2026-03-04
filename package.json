@@ -1,9 +1,9 @@
 {
-  "name": "wt-review",
+  "name": "wtr",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "wt-review": "./src/cli/index.ts"
+    "wtr": "./src/cli/index.ts"
   },
   "scripts": {
     "dev": "bun run src/cli/index.ts",

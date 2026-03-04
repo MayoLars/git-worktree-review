@@ -8,7 +8,11 @@ const commands: Record<string, () => Promise<void>> = {
   diff: () => import("./diff").then((m) => m.default()),
   merge: () => import("./merge").then((m) => m.default()),
   discard: () => import("./discard").then((m) => m.default()),
-  web: () => import("../web/server").then((m) => m.default()),
+  web: () => {
+    const demo = process.argv.includes("--demo");
+    return import("../web/server").then((m) => m.default({ demo }));
+  },
+  config: () => import("./config").then((m) => m.default()),
 };
 
 async function main() {
@@ -16,9 +20,9 @@ async function main() {
 
   if (!command || command === "--help" || command === "-h") {
     console.log(`
-wt-review — Git Worktree Review Tool
+wtr — Git Worktree Review Tool
 
-Usage: wt-review <command> [options]
+Usage: wtr <command> [options]
 
 Commands:
   status              List all worktrees with diff stats
@@ -27,15 +31,19 @@ Commands:
   merge <name>        Merge worktree branch and clean up
   discard <name>      Remove worktree and delete branch
   web                 Start the web UI
+  web --demo          Start the web UI with mock data
+  config              View/set config (e.g. --port 3333)
 
 Options:
   --base <branch>     Override base branch (default: main/master)
+  --demo              Use mock data (with web command)
   --help, -h          Show this help
 `);
     return;
   }
 
-  if (!(await isGitRepo())) {
+  const isDemo = command === "web" && process.argv.includes("--demo");
+  if (!isDemo && !(await isGitRepo())) {
     console.error("Error: Not inside a git repository.");
     process.exit(1);
   }
@@ -43,7 +51,7 @@ Options:
   const handler = commands[command];
   if (!handler) {
     console.error(`Unknown command: ${command}`);
-    console.error('Run "wt-review --help" for usage.');
+    console.error('Run "wtr --help" for usage.');
     process.exit(1);
   }
 
