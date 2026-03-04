@@ -11,9 +11,15 @@ export default async function startServer(options?: { demo?: boolean }) {
 
   const server = Bun.serve({
     port,
+    hostname: "127.0.0.1",
     async fetch(req) {
       const url = new URL(req.url);
       const path = url.pathname;
+
+      // Require custom header on POST requests to prevent CSRF
+      if (req.method === "POST" && req.headers.get("X-Requested-With") !== "wtr") {
+        return json({ error: "Forbidden" }, 403);
+      }
 
       // API routes
       if (path.startsWith("/api/")) {

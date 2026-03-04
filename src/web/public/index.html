@@ -677,7 +677,11 @@
 
   // API helpers
   async function api(path, method = 'GET') {
-    const res = await fetch(path, { method });
+    const opts = { method };
+    if (method === 'POST') {
+      opts.headers = { 'X-Requested-With': 'wtr' };
+    }
+    const res = await fetch(path, opts);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
@@ -716,7 +720,7 @@
       const del = wt.stat?.deletions ?? 0;
       const fileCount = wt.files?.length ?? 0;
       return `
-        <div class="wt-item${active ? ' active' : ''}" onclick="selectWorktree('${esc(wt.name)}')" title="${esc(wt.branch)}">
+        <div class="wt-item${active ? ' active' : ''}" data-wt-name="${escAttr(wt.name)}" title="${esc(wt.branch)}">
           <div class="wt-indicator"></div>
           <div class="wt-info">
             <div class="wt-name">${esc(wt.name)}</div>
@@ -725,6 +729,10 @@
           <span class="wt-badge">${fileCount}</span>
         </div>`;
     }).join('');
+
+    list.querySelectorAll('.wt-item[data-wt-name]').forEach(el => {
+      el.addEventListener('click', () => selectWorktree(el.dataset.wtName));
+    });
   }
 
   // Select a worktree
@@ -799,10 +807,10 @@
     // Commit filter tabs (only when multiple commits)
     if (commits.length > 1) {
       html += '<div class="commit-tabs">';
-      html += `<span class="commit-tab${!activeCommitFilter ? ' active' : ''}" onclick="filterByCommit(null)">All</span>`;
+      html += `<span class="commit-tab${!activeCommitFilter ? ' active' : ''}" data-commit="">All</span>`;
       for (const c of commits) {
         const isActive = activeCommitFilter === c.shortHash;
-        html += `<span class="commit-tab${isActive ? ' active' : ''}" onclick="filterByCommit('${esc(c.shortHash)}')" title="${esc(c.subject)}">
+        html += `<span class="commit-tab${isActive ? ' active' : ''}" data-commit="${escAttr(c.shortHash)}" title="${esc(c.subject)}">
           <span class="tab-hash">${esc(c.shortHash)}</span>
           <span class="tab-subject">${esc(c.subject)}</span>
         </span>`;
@@ -824,7 +832,7 @@
     for (const f of filteredFiles) {
       const insStr = f.insertions > 0 ? `<span class="plus">+${f.insertions}</span>` : '';
       const delStr = f.deletions > 0 ? `<span class="minus">-${f.deletions}</span>` : '';
-      html += `<div class="file-row" onclick="scrollToFile('${esc(f.path)}')">
+      html += `<div class="file-row" data-file-path="${escAttr(f.path)}">
         <span class="file-status ${f.status}">${f.status}</span>
         <span class="file-path">${esc(f.path)}</span>
         <span class="file-changes">${insStr} ${delStr}</span>
@@ -839,14 +847,20 @@
       html += '</div>';
     }
 
-    document.getElementById('content').innerHTML = html;
-  }
+    const contentEl = document.getElementById('content');
+    contentEl.innerHTML = html;
 
-  // Filter by commit tab
-  window.filterByCommit = function(shortHash) {
-    activeCommitFilter = shortHash;
-    renderDiffView();
-  };
+    // Attach event listeners (avoids inline onclick with untrusted data)
+    contentEl.querySelectorAll('.commit-tab[data-commit]').forEach(el => {
+      el.addEventListener('click', () => {
+        activeCommitFilter = el.dataset.commit || null;
+        renderDiffView();
+      });
+    });
+    contentEl.querySelectorAll('.file-row[data-file-path]').forEach(el => {
+      el.addEventListener('click', () => scrollToFile(el.dataset.filePath));
+    });
+  }
 
   // Parse and render raw unified diff
   function renderRawDiff(raw, files) {
@@ -1059,6 +1073,10 @@
     const d = document.createElement('div');
     d.textContent = String(str);
     return d.innerHTML;
+  }
+
+  function escAttr(str) {
+    return esc(str).replace(/'/g, '&#39;');
   }
 
   function cssId(path) {
