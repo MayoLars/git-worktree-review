@@ -32,7 +32,13 @@ export default async function summary() {
 
   console.log(`Summarizing changes in '${wt.name}' (${wt.branch})...\n`);
 
-  const prompt = `Summarize the following git diff. Explain what changed and why it matters. Be concise.\n\n${diffText}`;
+  // Truncate diff to stay well within ARG_MAX (~2MB on Linux, ~256KB on macOS)
+  const MAX_DIFF_SIZE = 128_000; // 128KB — safe on all platforms
+  const truncated = diffText.length > MAX_DIFF_SIZE
+    ? diffText.slice(0, MAX_DIFF_SIZE) + "\n\n[... diff truncated for size ...]"
+    : diffText;
+
+  const prompt = `Summarize the following git diff. Explain what changed and why it matters. Be concise.\n\n${truncated}`;
   const result = await $`gh copilot explain ${prompt}`.nothrow();
 
   if (result.exitCode !== 0) {
