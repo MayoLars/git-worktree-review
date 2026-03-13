@@ -13,12 +13,16 @@ async function getRepoRoot(): Promise<string> {
 }
 
 export async function loadConfig(): Promise<WtrConfig> {
-  const root = await getRepoRoot();
-  const configPath = join(root, CONFIG_FILE);
-  const file = Bun.file(configPath);
+  try {
+    const root = await getRepoRoot();
+    const configPath = join(root, CONFIG_FILE);
+    const file = Bun.file(configPath);
 
-  if (await file.exists()) {
-    return await file.json();
+    if (await file.exists()) {
+      return await file.json();
+    }
+  } catch {
+    // Malformed JSON or git root detection failed — use defaults
   }
 
   return {};
