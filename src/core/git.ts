@@ -136,17 +136,25 @@ export async function getDiff(base: string, branch: string): Promise<DiffResult>
   let commitDiffs: Record<string, string> | undefined;
   let commitFiles: Record<string, FileDiff[]> | undefined;
 
-  if (commits.length > 1) {
+  if (commits.length >= 1) {
     commitDiffs = {};
     commitFiles = {};
 
+    // Well-known SHA for git's empty tree — used as parent for root commits
+    const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf899d15363ed7fd1";
+
     const perCommitResults = await Promise.all(
       commits.map(async (c) => {
+        // Check if parent exists (root commits have no parent)
+        const parentCheck = await $`git rev-parse --verify ${c.hash}~1`.quiet().nothrow();
+        const parent = parentCheck.exitCode === 0 ? `${c.hash}~1` : EMPTY_TREE;
+
         const [diffRes, numstatRes, nameStatusRes] = await Promise.all([
-          $`git diff ${c.hash}~1..${c.hash}`.quiet().nothrow(),
-          $`git diff ${c.hash}~1..${c.hash} --numstat`.quiet().nothrow(),
-          $`git diff ${c.hash}~1..${c.hash} --name-status`.quiet().nothrow(),
+          $`git diff ${parent}..${c.hash}`.quiet().nothrow(),
+          $`git diff ${parent}..${c.hash} --numstat`.quiet().nothrow(),
+          $`git diff ${parent}..${c.hash} --name-status`.quiet().nothrow(),
         ]);
+
         return { shortHash: c.shortHash, diffRes, numstatRes, nameStatusRes };
       })
     );
