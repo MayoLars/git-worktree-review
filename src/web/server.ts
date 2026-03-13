@@ -4,6 +4,11 @@ import type { WorktreeDetail } from "../core/types";
 import { handleDemoApi } from "./demo-data";
 import { join, resolve } from "path";
 
+/** Validates worktree name from URL to prevent injection if ever used in commands */
+function validateWorktreeName(name: string): boolean {
+  return /^[a-zA-Z0-9._\-]+$/.test(name) && name.length <= 255;
+}
+
 export default async function startServer(options?: { demo?: boolean }) {
   const demo = options?.demo ?? false;
   const config = demo ? {} : await loadConfig();
@@ -74,6 +79,7 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
     const diffMatch = path.match(/^\/api\/worktree\/([^/]+)\/diff$/);
     if (diffMatch && req.method === "GET") {
       const name = decodeURIComponent(diffMatch[1]);
+      if (!validateWorktreeName(name)) return json({ error: "Invalid worktree name" }, 400);
       const base = await getBaseBranch(baseBranch);
       const worktrees = await getWorktrees();
       const wt = worktrees.find((w) => w.name === name);
@@ -87,6 +93,7 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
     const summaryMatch = path.match(/^\/api\/worktree\/([^/]+)\/summary$/);
     if (summaryMatch && req.method === "GET") {
       const name = decodeURIComponent(summaryMatch[1]);
+      if (!validateWorktreeName(name)) return json({ error: "Invalid worktree name" }, 400);
       const base = await getBaseBranch(baseBranch);
       const worktrees = await getWorktrees();
       const wt = worktrees.find((w) => w.name === name);
@@ -104,6 +111,7 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
     const mergeMatch = path.match(/^\/api\/worktree\/([^/]+)\/merge$/);
     if (mergeMatch && req.method === "POST") {
       const name = decodeURIComponent(mergeMatch[1]);
+      if (!validateWorktreeName(name)) return json({ error: "Invalid worktree name" }, 400);
       const result = await mergeWorktree(name, baseBranch);
       return json(result, result.success ? 200 : 400);
     }
@@ -112,6 +120,7 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
     const discardMatch = path.match(/^\/api\/worktree\/([^/]+)\/discard$/);
     if (discardMatch && req.method === "POST") {
       const name = decodeURIComponent(discardMatch[1]);
+      if (!validateWorktreeName(name)) return json({ error: "Invalid worktree name" }, 400);
       const result = await discardWorktree(name);
       return json(result, result.success ? 200 : 400);
     }
