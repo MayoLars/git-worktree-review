@@ -201,16 +201,6 @@
   .wt-stats .plus { color: var(--green); }
   .wt-stats .minus { color: var(--red); }
 
-  .wt-badge {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    font-size: 11px;
-    padding: 1px 7px;
-    border-radius: 10px;
-    font-weight: 500;
-    flex-shrink: 0;
-  }
-
   /* Sidebar commit list under selected worktree */
   .wt-commits {
     padding: 4px 0 4px 20px;
@@ -581,6 +571,78 @@
 
   .btn-cancel:hover { background: var(--bg-hover); }
 
+  /* Scroll to top button */
+  .scroll-top-btn {
+    position: fixed;
+    bottom: 72px;
+    right: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, background 0.15s;
+    z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .scroll-top-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .scroll-top-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* Creator credit */
+  .topbar-credit {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.2px;
+  }
+
+  .topbar-credit a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .topbar-credit a:hover {
+    color: var(--text-secondary);
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* Worktree card meta line */
+  .wt-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .wt-meta-item {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -592,7 +654,10 @@
 
 <div class="topbar">
   <h1><span>wtr</span> — git-worktree-review</h1>
-  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
+  <div class="topbar-right">
+    <span class="topbar-credit">by <a href="https://github.com/MayoLars" target="_blank" rel="noopener">Nicklas</a></span>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
+  </div>
 </div>
 
 <div class="main-layout">
@@ -609,6 +674,8 @@
     <div class="content-empty">Select a worktree to view changes</div>
   </main>
 </div>
+
+<button class="scroll-top-btn" id="scrollTopBtn" title="Scroll to top">&#9650;</button>
 
 <div class="bottom-bar hidden" id="bottomBar">
   <button class="btn btn-merge" id="mergeBtn" onclick="confirmAction('merge')">Merge</button>
@@ -705,6 +772,8 @@
       const fileCount = wt.files?.length ?? 0;
       const commits = wt.commits || [];
 
+      const commitCount = commits.length;
+
       let html = `
         <div class="wt-item${active ? ' active' : ''}" data-wt-name="${escAttr(wt.name)}" title="${esc(wt.branch)}">
           <div class="wt-indicator"></div>
@@ -712,7 +781,10 @@
             <div class="wt-name">${esc(wt.name)}</div>
             <div class="wt-stats"><span class="plus">+${ins}</span> <span class="minus">-${del}</span></div>
           </div>
-          <span class="wt-badge">${fileCount}</span>
+          <div class="wt-meta">
+            <span class="wt-meta-item">${fileCount} file${fileCount !== 1 ? 's' : ''}</span>
+            ${commitCount > 0 ? `<span class="wt-meta-item">${commitCount} commit${commitCount !== 1 ? 's' : ''}</span>` : ''}
+          </div>
         </div>`;
 
       // Show commits under the selected worktree
@@ -1070,6 +1142,20 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeDialog();
   });
+
+  // Scroll to top button
+  (function() {
+    const contentEl = document.getElementById('content');
+    const scrollBtn = document.getElementById('scrollTopBtn');
+
+    contentEl.addEventListener('scroll', () => {
+      scrollBtn.classList.toggle('visible', contentEl.scrollTop > 200);
+    });
+
+    scrollBtn.addEventListener('click', () => {
+      contentEl.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  })();
 
   // Sidebar resize
   (function() {
