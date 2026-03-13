@@ -31,6 +31,7 @@ export interface DiffResult {
   stat: string;
   files: FileDiff[];
   summary: DiffStat;
+  commits?: import("./git").CommitInfo[];
   commitDiffs?: Record<string, string>;
   commitFiles?: Record<string, FileDiff[]>;
 }
