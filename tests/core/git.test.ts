@@ -48,11 +48,18 @@ describe("parseFileDiffs", () => {
     ]);
   });
 
-  test("handles renamed files", () => {
-    const numstat = "0\t0\tnew-name.ts\n";
+  test("handles renamed files (simple format)", () => {
+    const numstat = "0\t0\told-name.ts => new-name.ts\n";
     const nameStatus = "R100\told-name.ts\tnew-name.ts\n";
     const result = parseFileDiffs(numstat, nameStatus);
     expect(result).toEqual([{ path: "new-name.ts", status: "R", insertions: 0, deletions: 0 }]);
+  });
+
+  test("handles renamed files (brace format)", () => {
+    const numstat = "5\t2\tsrc/{old-name.ts => new-name.ts}\n";
+    const nameStatus = "R095\tsrc/old-name.ts\tsrc/new-name.ts\n";
+    const result = parseFileDiffs(numstat, nameStatus);
+    expect(result).toEqual([{ path: "src/new-name.ts", status: "R", insertions: 5, deletions: 2 }]);
   });
 
   test("handles binary files (- for insertions/deletions)", () => {

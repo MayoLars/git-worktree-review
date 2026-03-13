@@ -87,6 +87,20 @@ export async function getDiffStat(base: string, branch: string): Promise<DiffSta
   return parseDiffStat(result.text());
 }
 
+/** Resolve git's numstat rename path formats to the new path:
+ *  "old.ts => new.ts" → "new.ts"
+ *  "src/{old.ts => new.ts}" → "src/new.ts"
+ *  "{old-dir => new-dir}/file.ts" → "new-dir/file.ts"
+ */
+function resolveNumstatRenamePath(rawPath: string): string {
+  if (!rawPath.includes(" => ")) return rawPath;
+  const braceMatch = rawPath.match(/^(.*?)\{.*? => (.*?)\}(.*)$/);
+  if (braceMatch) return braceMatch[1] + braceMatch[2] + braceMatch[3];
+  const simpleMatch = rawPath.match(/^.* => (.+)$/);
+  if (simpleMatch) return simpleMatch[1];
+  return rawPath;
+}
+
 export function parseFileDiffs(numstatOutput: string, nameStatusOutput: string): FileDiff[] {
   // Build a map of path -> status from --name-status (accurate source)
   const statusMap = new Map<string, FileDiff["status"]>();
@@ -111,7 +125,8 @@ export function parseFileDiffs(numstatOutput: string, nameStatusOutput: string):
 
     const insertions = match[1] === "-" ? 0 : parseInt(match[1]);
     const deletions = match[2] === "-" ? 0 : parseInt(match[2]);
-    const path = match[3];
+    const rawPath = match[3];
+    const path = resolveNumstatRenamePath(rawPath);
     const status = statusMap.get(path) ?? "M";
 
     files.push({ path, status, insertions, deletions });
@@ -170,6 +185,7 @@ export async function getDiff(base: string, branch: string): Promise<DiffResult>
     stat: statResult.text(),
     files,
     summary,
+    commits,
     commitDiffs,
     commitFiles,
   };
