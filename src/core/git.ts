@@ -33,9 +33,7 @@ export async function getBaseBranch(override?: string): Promise<string> {
   throw new Error("Could not detect base branch. Use --base to specify.");
 }
 
-export async function getWorktrees(): Promise<Worktree[]> {
-  const result = await $`git worktree list --porcelain`.quiet();
-  const output = result.text();
+export function parseWorktreeList(output: string): Worktree[] {
   const blocks = output.trim().split("\n\n");
   const worktrees: Worktree[] = [];
 
@@ -62,15 +60,18 @@ export async function getWorktrees(): Promise<Worktree[]> {
   return worktrees;
 }
 
-export async function getDiffStat(base: string, branch: string): Promise<DiffStat> {
-  const result = await $`git diff ${base}...${branch} --shortstat`.quiet().nothrow();
-  const text = result.text().trim();
+export async function getWorktrees(): Promise<Worktree[]> {
+  const result = await $`git worktree list --porcelain`.quiet();
+  return parseWorktreeList(result.text());
+}
 
-  if (!text) return { filesChanged: 0, insertions: 0, deletions: 0 };
+export function parseDiffStat(text: string): DiffStat {
+  const trimmed = text.trim();
+  if (!trimmed) return { filesChanged: 0, insertions: 0, deletions: 0 };
 
-  const filesMatch = text.match(/(\d+) file/);
-  const insertMatch = text.match(/(\d+) insertion/);
-  const deleteMatch = text.match(/(\d+) deletion/);
+  const filesMatch = trimmed.match(/(\d+) file/);
+  const insertMatch = trimmed.match(/(\d+) insertion/);
+  const deleteMatch = trimmed.match(/(\d+) deletion/);
 
   return {
     filesChanged: filesMatch ? parseInt(filesMatch[1]) : 0,
@@ -79,7 +80,12 @@ export async function getDiffStat(base: string, branch: string): Promise<DiffSta
   };
 }
 
-function parseFileDiffs(numstatOutput: string, nameStatusOutput: string): FileDiff[] {
+export async function getDiffStat(base: string, branch: string): Promise<DiffStat> {
+  const result = await $`git diff ${base}...${branch} --shortstat`.quiet().nothrow();
+  return parseDiffStat(result.text());
+}
+
+export function parseFileDiffs(numstatOutput: string, nameStatusOutput: string): FileDiff[] {
   // Build a map of path -> status from --name-status (accurate source)
   const statusMap = new Map<string, FileDiff["status"]>();
   for (const line of nameStatusOutput.trim().split("\n")) {
@@ -184,12 +190,11 @@ export interface CommitInfo {
   date: string;
 }
 
-export async function getCommitLog(base: string, branch: string): Promise<CommitInfo[]> {
-  const result = await $`git log ${base}..${branch} --format=%H%n%h%n%s%n%an%n%ai --reverse`.quiet().nothrow();
-  const text = result.text().trim();
-  if (!text) return [];
+export function parseCommitLog(text: string): CommitInfo[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
 
-  const lines = text.split("\n");
+  const lines = trimmed.split("\n");
   const commits: CommitInfo[] = [];
 
   for (let i = 0; i + 4 < lines.length; i += 5) {
@@ -203,6 +208,11 @@ export async function getCommitLog(base: string, branch: string): Promise<Commit
   }
 
   return commits;
+}
+
+export async function getCommitLog(base: string, branch: string): Promise<CommitInfo[]> {
+  const result = await $`git log ${base}..${branch} --format=%H%n%h%n%s%n%an%n%ai --reverse`.quiet().nothrow();
+  return parseCommitLog(result.text());
 }
 
 export async function mergeWorktree(
