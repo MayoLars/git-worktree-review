@@ -53,21 +53,18 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
     if (path === "/api/worktrees" && req.method === "GET") {
       const base = await getBaseBranch(baseBranch);
       const worktrees = await getWorktrees();
-      const details: WorktreeDetail[] = [];
 
-      for (const wt of worktrees) {
-        if (wt.isMain) continue;
-        const [diff, commits] = await Promise.all([
-          getDiff(base, wt.branch),
-          getCommitLog(base, wt.branch),
-        ]);
-        details.push({
-          ...wt,
-          stat: diff.summary,
-          files: diff.files,
-          commits,
-        });
-      }
+      const details: WorktreeDetail[] = await Promise.all(
+        worktrees
+          .filter((wt) => !wt.isMain)
+          .map(async (wt) => {
+            const [diff, commits] = await Promise.all([
+              getDiff(base, wt.branch),
+              getCommitLog(base, wt.branch),
+            ]);
+            return { ...wt, stat: diff.summary, files: diff.files, commits };
+          })
+      );
 
       return json({ baseBranch: base, worktrees: details });
     }
