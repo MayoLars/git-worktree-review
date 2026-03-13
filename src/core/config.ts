@@ -29,7 +29,11 @@ export async function loadConfig(): Promise<WtrConfig> {
 }
 
 export async function saveConfig(config: WtrConfig): Promise<void> {
-  const root = await getRepoRoot();
-  const configPath = join(root, CONFIG_FILE);
-  await Bun.write(configPath, JSON.stringify(config, null, 2) + "\n");
+  try {
+    const root = await getRepoRoot();
+    const configPath = join(root, CONFIG_FILE);
+    await Bun.write(configPath, JSON.stringify(config, null, 2) + "\n");
+  } catch {
+    throw new Error("Failed to save config. Are you in a git repository?");
+  }
 }
