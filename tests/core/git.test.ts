@@ -49,13 +49,10 @@ describe("parseFileDiffs", () => {
   });
 
   test("handles renamed files", () => {
-    // git --name-status stores rename as "R100\told\tnew" which joins to "old\tnew" as key
-    // git --numstat uses "{old => new}" or just new path, so the statusMap lookup
-    // for the numstat path falls back to "M" — this matches current behavior
     const numstat = "0\t0\tnew-name.ts\n";
     const nameStatus = "R100\told-name.ts\tnew-name.ts\n";
     const result = parseFileDiffs(numstat, nameStatus);
-    expect(result).toEqual([{ path: "new-name.ts", status: "M", insertions: 0, deletions: 0 }]);
+    expect(result).toEqual([{ path: "new-name.ts", status: "R", insertions: 0, deletions: 0 }]);
   });
 
   test("handles binary files (- for insertions/deletions)", () => {
@@ -154,6 +151,12 @@ describe("parseWorktreeList", () => {
         isMain: false,
       },
     ]);
+  });
+
+  test("returns empty array for empty input", () => {
+    expect(parseWorktreeList("")).toEqual([]);
+    expect(parseWorktreeList("  ")).toEqual([]);
+    expect(parseWorktreeList("\n")).toEqual([]);
   });
 
   test("handles bare worktrees", () => {

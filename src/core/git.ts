@@ -34,7 +34,9 @@ export async function getBaseBranch(override?: string): Promise<string> {
 }
 
 export function parseWorktreeList(output: string): Worktree[] {
-  const blocks = output.trim().split("\n\n");
+  const trimmed = output.trim();
+  if (!trimmed) return [];
+  const blocks = trimmed.split("\n\n");
   const worktrees: Worktree[] = [];
 
   for (const block of blocks) {
@@ -92,9 +94,12 @@ export function parseFileDiffs(numstatOutput: string, nameStatusOutput: string):
     if (!line.trim()) continue;
     const [statusChar, ...pathParts] = line.split("\t");
     const path = pathParts.join("\t");
-    if (statusChar?.startsWith("A")) statusMap.set(path, "A");
+    if (statusChar?.startsWith("R")) {
+      // Renames have two paths: old\tnew — use the new path as key
+      const newPath = pathParts[pathParts.length - 1];
+      statusMap.set(newPath, "R");
+    } else if (statusChar?.startsWith("A")) statusMap.set(path, "A");
     else if (statusChar?.startsWith("D")) statusMap.set(path, "D");
-    else if (statusChar?.startsWith("R")) statusMap.set(path, "R");
     else statusMap.set(path, "M");
   }
 
