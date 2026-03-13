@@ -31,4 +31,6 @@ export interface DiffResult {
   stat: string;
   files: FileDiff[];
   summary: DiffStat;
+  commitDiffs?: Record<string, string>;
+  commitFiles?: Record<string, FileDiff[]>;
 }

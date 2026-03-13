@@ -110,21 +110,49 @@ function parseFileDiffs(numstatOutput: string, nameStatusOutput: string): FileDi
 }
 
 export async function getDiff(base: string, branch: string): Promise<DiffResult> {
-  const [rawResult, statResult, numstatResult, nameStatusResult] = await Promise.all([
+  const [rawResult, statResult, numstatResult, nameStatusResult, commits] = await Promise.all([
     $`git diff ${base}...${branch}`.quiet().nothrow(),
     $`git diff ${base}...${branch} --stat`.quiet().nothrow(),
     $`git diff ${base}...${branch} --numstat`.quiet().nothrow(),
     $`git diff ${base}...${branch} --name-status`.quiet().nothrow(),
+    getCommitLog(base, branch),
   ]);
 
   const files = parseFileDiffs(numstatResult.text(), nameStatusResult.text());
   const summary = await getDiffStat(base, branch);
+
+  // Build per-commit diffs and file lists
+  let commitDiffs: Record<string, string> | undefined;
+  let commitFiles: Record<string, FileDiff[]> | undefined;
+
+  if (commits.length > 1) {
+    commitDiffs = {};
+    commitFiles = {};
+
+    const perCommitResults = await Promise.all(
+      commits.map(async (c) => {
+        const [diffRes, numstatRes, nameStatusRes] = await Promise.all([
+          $`git diff ${c.hash}~1..${c.hash}`.quiet().nothrow(),
+          $`git diff ${c.hash}~1..${c.hash} --numstat`.quiet().nothrow(),
+          $`git diff ${c.hash}~1..${c.hash} --name-status`.quiet().nothrow(),
+        ]);
+        return { shortHash: c.shortHash, diffRes, numstatRes, nameStatusRes };
+      })
+    );
+
+    for (const { shortHash, diffRes, numstatRes, nameStatusRes } of perCommitResults) {
+      commitDiffs[shortHash] = diffRes.text();
+      commitFiles[shortHash] = parseFileDiffs(numstatRes.text(), nameStatusRes.text());
+    }
+  }
 
   return {
     raw: rawResult.text(),
     stat: statResult.text(),
     files,
     summary,
+    commitDiffs,
+    commitFiles,
   };
 }
 
