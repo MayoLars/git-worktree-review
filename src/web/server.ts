@@ -12,12 +12,14 @@ function validateWorktreeName(name: string): boolean {
 export default async function startServer(options?: { demo?: boolean }) {
   const demo = options?.demo ?? false;
   const config = demo ? {} : await loadConfig();
-  const port = parseInt(process.env.PORT ?? "") || config.port || 3000;
+  const port = parseInt(process.env.PORT ?? "") || config.port || 3333;
+  const idleTimeout = config.idleTimeout ?? 30;
   const publicDir = join(import.meta.dir, "public");
 
   const server = Bun.serve({
     port,
     hostname: "127.0.0.1",
+    idleTimeout,
     async fetch(req) {
       const url = new URL(req.url);
       const path = url.pathname;

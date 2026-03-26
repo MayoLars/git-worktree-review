@@ -32,7 +32,7 @@ Commands:
   discard <name>      Remove worktree and delete branch
   web                 Start the web UI
   web --demo          Start the web UI with mock data
-  config              View/set config (e.g. --port 3333)
+  config              View/set config (e.g. --port 3333 --idletimeout 60)
 
 Options:
   --base <branch>     Override base branch (default: main/master)

@@ -3,6 +3,7 @@ import { join } from "path";
 
 export interface WtrConfig {
   port?: number;
+  idleTimeout?: number;
 }
 
 const CONFIG_FILE = ".wtr.json";
