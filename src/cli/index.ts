@@ -13,6 +13,7 @@ const commands: Record<string, () => Promise<void>> = {
     return import("../web/server").then((m) => m.default({ demo }));
   },
   config: () => import("./config").then((m) => m.default()),
+  update: () => import("./update").then((m) => m.default()),
 };
 
 async function main() {
@@ -33,6 +34,7 @@ Commands:
   web                 Start the web UI
   web --demo          Start the web UI with mock data
   config              View/set config (e.g. --port 3333 --idletimeout 60)
+  update              Pull latest changes and reinstall
 
 Options:
   --base <branch>     Override base branch (default: main/master)
@@ -42,8 +44,8 @@ Options:
     return;
   }
 
-  const isDemo = command === "web" && process.argv.includes("--demo");
-  if (!isDemo && !(await isGitRepo())) {
+  const skipRepoCheck = (command === "web" && process.argv.includes("--demo")) || command === "update";
+  if (!skipRepoCheck && !(await isGitRepo())) {
     console.error("Error: Not inside a git repository.");
     process.exit(1);
   }
