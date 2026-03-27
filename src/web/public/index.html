@@ -108,6 +108,19 @@
 
   .theme-toggle:hover { background: var(--bg-hover); color: var(--text-primary); }
 
+  .settings-toggle {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: var(--font-sans);
+    transition: background 0.15s;
+  }
+  .settings-toggle:hover { background: var(--bg-hover); color: var(--text-primary); }
+
   /* Main layout */
   .main-layout {
     display: flex;
@@ -161,18 +174,18 @@
     width: 22px;
     height: 22px;
     border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-secondary);
+    border: 1px solid var(--green);
+    background: var(--green-bg);
+    color: var(--green);
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.12s, color 0.12s;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
-  .btn-create:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .btn-create:hover { background: var(--green); color: #fff; border-color: var(--green); }
 
   .sidebar-list {
     flex: 1;
@@ -613,6 +626,72 @@
     min-height: 18px;
   }
 
+  /* Settings dialog */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+  .settings-overlay.active { display: flex; }
+  .settings-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    min-width: 380px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  .settings-box h3 {
+    margin: 0 0 20px;
+    font-size: 15px;
+    color: var(--text-primary);
+  }
+  .settings-field {
+    margin-bottom: 14px;
+  }
+  .settings-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .settings-field input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: var(--font-mono);
+    outline: none;
+    box-sizing: border-box;
+  }
+  .settings-field input:focus { border-color: var(--accent); }
+  .settings-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .settings-msg {
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 18px;
+  }
+
   /* Loading & error states */
   .loading {
     display: flex;
@@ -775,6 +854,7 @@
   <span class="topbar-credit">by <a href="https://github.com/MayoLars" target="_blank" rel="noopener">mayolars</a></span>
   <div style="flex:0.5"></div>
   <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">Dark</button>
+  <button class="settings-toggle" id="settingsBtn" title="Settings">&#9881;</button>
 </div>
 
 <div class="main-layout">
@@ -795,8 +875,8 @@
 <button class="scroll-top-btn" id="scrollTopBtn" title="Scroll to top">&#9650;</button>
 
 <div class="bottom-bar hidden" id="bottomBar">
-  <button class="btn btn-merge" id="mergeBtn" onclick="confirmAction('merge')">Merge</button>
-  <button class="btn btn-discard" id="discardBtn" onclick="confirmAction('discard')">Discard</button>
+  <button class="btn btn-merge" id="mergeBtn" onclick="confirmAction('merge')">Merge Tree</button>
+  <button class="btn btn-discard" id="discardBtn" onclick="confirmAction('discard')">Discard Tree</button>
   <div class="bottom-message" id="bottomMsg"></div>
 </div>
 
@@ -820,6 +900,32 @@
     <div class="create-actions">
       <button class="btn btn-cancel" onclick="closeCreate()">Cancel</button>
       <button class="btn btn-merge" id="createSubmit">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-box">
+    <h3>Settings</h3>
+    <div class="settings-field">
+      <label>Worktrees Directory</label>
+      <input type="text" id="settingsWorktreesDir" placeholder=".worktrees">
+      <div class="settings-hint">Relative to repo root. Default: .worktrees</div>
+    </div>
+    <div class="settings-field">
+      <label>Idle Timeout (seconds)</label>
+      <input type="number" id="settingsIdleTimeout" placeholder="30" min="1" max="300">
+      <div class="settings-hint">Connection idle timeout, 1–300. Default: 30</div>
+    </div>
+    <div class="settings-field">
+      <label>Port</label>
+      <input type="number" id="settingsPort" placeholder="3333" min="1" max="65535">
+      <div class="settings-hint">Takes effect on restart. Default: 3333</div>
+    </div>
+    <div class="settings-msg" id="settingsMsg"></div>
+    <div class="settings-actions">
+      <button class="btn btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-merge" id="settingsSave">Save</button>
     </div>
   </div>
 </div>
@@ -1208,7 +1314,7 @@
         + `<strong style="color:var(--text-primary)">3.</strong> <span style="color:var(--text-muted)">On success:</span> git worktree remove ${p} <span style="color:var(--text-muted)">— removes the worktree directory</span><br>`
         + `<strong style="color:var(--text-primary)">4.</strong> git branch -d ${b} <span style="color:var(--text-muted)">— deletes the branch (safe delete, only if fully merged)</span>`
         + `</code>`;
-      confirmBtn.textContent = 'Merge';
+      confirmBtn.textContent = 'Merge Tree';
       confirmBtn.className = 'btn btn-merge';
     } else {
       title.innerHTML = `Confirm Discard — <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:14px">wtr discard ${n}</code>`;
@@ -1217,7 +1323,7 @@
         + `<strong style="color:var(--text-primary)">1.</strong> git worktree remove ${p} --force <span style="color:var(--text-muted)">— removes the worktree directory (force to handle uncommitted changes)</span><br>`
         + `<strong style="color:var(--text-primary)">2.</strong> git branch -D ${b} <span style="color:var(--text-muted)">— force-deletes the branch regardless of merge status</span>`
         + `</code>`;
-      confirmBtn.textContent = 'Discard';
+      confirmBtn.textContent = 'Discard Tree';
       confirmBtn.className = 'btn btn-discard';
     }
 
@@ -1344,6 +1450,54 @@
     }
   });
 
+  // Settings
+  document.getElementById('settingsBtn').addEventListener('click', async function() {
+    document.getElementById('settingsMsg').textContent = '';
+    try {
+      const config = await api('/api/config');
+      document.getElementById('settingsWorktreesDir').value = config.worktreesDir || '';
+      document.getElementById('settingsIdleTimeout').value = config.idleTimeout || '';
+      document.getElementById('settingsPort').value = config.port || '';
+    } catch { /* use empty defaults */ }
+    document.getElementById('settingsOverlay').classList.add('active');
+  });
+
+  window.closeSettings = function() {
+    document.getElementById('settingsOverlay').classList.remove('active');
+  };
+
+  document.getElementById('settingsOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeSettings();
+  });
+
+  document.getElementById('settingsSave').addEventListener('click', async function() {
+    const msg = document.getElementById('settingsMsg');
+    const body = {};
+    const dir = document.getElementById('settingsWorktreesDir').value.trim();
+    const timeout = document.getElementById('settingsIdleTimeout').value.trim();
+    const port = document.getElementById('settingsPort').value.trim();
+
+    body.worktreesDir = dir;
+    if (timeout) body.idleTimeout = timeout;
+    if (port) body.port = port;
+
+    this.disabled = true;
+    this.textContent = 'Saving...';
+    msg.textContent = '';
+
+    try {
+      await api('/api/config', 'POST', JSON.stringify(body));
+      msg.textContent = 'Settings saved.';
+      msg.style.color = 'var(--green)';
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.style.color = 'var(--red)';
+    } finally {
+      this.disabled = false;
+      this.textContent = 'Save';
+    }
+  });
+
   // Utilities
   function esc(str) {
     if (!str) return '';
@@ -1365,9 +1519,12 @@
     if (e.target === this) closeDialog();
   });
 
-  // Close dialog on Escape
+  // Close dialogs on Escape
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeDialog();
+    if (e.key === 'Escape') {
+      closeDialog();
+      closeSettings();
+    }
   });
 
   // Scroll to top button

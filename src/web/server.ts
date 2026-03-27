@@ -1,5 +1,5 @@
 import { getWorktrees, getBaseBranch, getDiff, getDiffStat, mergeWorktree, discardWorktree, createWorktree } from "../core/git";
-import { loadConfig } from "../core/config";
+import { loadConfig, saveConfig } from "../core/config";
 import type { WorktreeDetail } from "../core/types";
 import { handleDemoApi } from "./demo-data";
 import { join, resolve } from "path";
@@ -134,6 +134,41 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
       if (!validateWorktreeName(branch)) return json({ error: "Invalid branch name" }, 400);
       const result = await createWorktree(branch);
       return json(result, result.success ? 200 : 400);
+    }
+
+    // GET /api/config
+    if (path === "/api/config" && req.method === "GET") {
+      const config = await loadConfig();
+      return json(config);
+    }
+
+    // POST /api/config
+    if (path === "/api/config" && req.method === "POST") {
+      const body = await req.json();
+      const config = await loadConfig();
+
+      if (body.port !== undefined) {
+        const port = parseInt(body.port);
+        if (isNaN(port) || port < 1 || port > 65535) {
+          return json({ error: "Port must be 1–65535" }, 400);
+        }
+        config.port = port;
+      }
+
+      if (body.idleTimeout !== undefined) {
+        const timeout = parseInt(body.idleTimeout);
+        if (isNaN(timeout) || timeout < 1 || timeout > 300) {
+          return json({ error: "Idle timeout must be 1–300" }, 400);
+        }
+        config.idleTimeout = timeout;
+      }
+
+      if (body.worktreesDir !== undefined) {
+        config.worktreesDir = body.worktreesDir || undefined;
+      }
+
+      await saveConfig(config);
+      return json({ success: true, config });
     }
 
     return json({ error: "Not found" }, 404);
