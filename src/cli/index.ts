@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { isGitRepo } from "../core/git";
+import { getVersion } from "./version";
 
 const commands: Record<string, () => Promise<void>> = {
   status: () => import("./status").then((m) => m.default()),
@@ -14,10 +15,16 @@ const commands: Record<string, () => Promise<void>> = {
   },
   config: () => import("./config").then((m) => m.default()),
   update: () => import("./update").then((m) => m.default()),
+  version: async () => console.log(`wtr v${await getVersion()}`),
 };
 
 async function main() {
   const command = process.argv[2];
+
+  if (command === "--version" || command === "-v") {
+    console.log(`wtr v${await getVersion()}`);
+    return;
+  }
 
   if (!command || command === "--help" || command === "-h") {
     console.log(`
@@ -35,16 +42,18 @@ Commands:
   web --demo          Start the web UI with mock data
   config              View/set config (e.g. --port 3333 --idletimeout 60)
   update              Pull latest changes and reinstall
+  version             Show current version
 
 Options:
   --base <branch>     Override base branch (default: main/master)
   --demo              Use mock data (with web command)
   --help, -h          Show this help
+  --version, -v       Show version
 `);
     return;
   }
 
-  const skipRepoCheck = (command === "web" && process.argv.includes("--demo")) || command === "update";
+  const skipRepoCheck = (command === "web" && process.argv.includes("--demo")) || command === "update" || command === "version";
   if (!skipRepoCheck && !(await isGitRepo())) {
     console.error("Error: Not inside a git repository.");
     process.exit(1);

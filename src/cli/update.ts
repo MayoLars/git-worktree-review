@@ -1,9 +1,12 @@
 import { $ } from "bun";
 import { dirname, resolve } from "path";
+import { getVersion } from "./version";
 
 export default async function update() {
   const repoDir = resolve(dirname(import.meta.dir), "..");
+  const oldVersion = await getVersion();
 
+  console.log(`Current version: v${oldVersion}`);
   console.log("Pulling latest changes...");
   const pull = await $`git -C ${repoDir} pull`.quiet();
   const pullOutput = pull.text().trim();
@@ -15,5 +18,11 @@ export default async function update() {
 
   console.log("Installing dependencies...");
   await $`bun install --cwd ${repoDir}`.quiet();
-  console.log("Updated successfully!");
+
+  const newVersion = await getVersion();
+  if (newVersion !== oldVersion) {
+    console.log(`Updated: v${oldVersion} → v${newVersion}`);
+  } else {
+    console.log("Updated successfully!");
+  }
 }

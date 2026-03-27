@@ -494,6 +494,56 @@
     color: var(--text-secondary);
   }
 
+  /* Progress overlay */
+  .progress-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+  .progress-overlay.active { display: flex; }
+  .progress-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 48px;
+    text-align: center;
+    min-width: 320px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  .progress-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+  .progress-abort {
+    padding: 6px 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--red);
+    background: transparent;
+    color: var(--red);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .progress-abort:hover { background: var(--red-bg); }
+
   /* Loading & error states */
   .loading {
     display: flex;
@@ -681,6 +731,14 @@
   <div class="bottom-message" id="bottomMsg"></div>
 </div>
 
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-box">
+    <div class="progress-spinner"></div>
+    <div class="progress-label" id="progressLabel">Merging...</div>
+    <button class="progress-abort" id="progressAbort">Abort</button>
+  </div>
+</div>
+
 <div class="dialog-overlay hidden" id="dialogOverlay">
   <div class="dialog">
     <h3 id="dialogTitle">Confirm</h3>
@@ -725,11 +783,12 @@
   }
 
   // API helpers
-  async function api(path, method = 'GET') {
+  async function api(path, method = 'GET', body = null, signal = null) {
     const opts = { method };
     if (method === 'POST') {
       opts.headers = { 'X-Requested-With': 'wtr' };
     }
+    if (signal) opts.signal = signal;
     const res = await fetch(path, opts);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
@@ -1082,6 +1141,8 @@
     pendingAction = null;
   };
 
+  let actionAbortController = null;
+
   async function executeAction(action) {
     closeDialog();
     if (!selectedWt) return;
@@ -1090,14 +1151,18 @@
     const mergeBtn = document.getElementById('mergeBtn');
     const discardBtn = document.getElementById('discardBtn');
     const msg = document.getElementById('bottomMsg');
+    const overlay = document.getElementById('progressOverlay');
+    const label = document.getElementById('progressLabel');
 
     mergeBtn.disabled = true;
     discardBtn.disabled = true;
-    msg.textContent = action === 'merge' ? 'Merging...' : 'Discarding...';
-    msg.style.color = 'var(--text-secondary)';
+    label.textContent = action === 'merge' ? 'Merging...' : 'Discarding...';
+    overlay.classList.add('active');
+
+    actionAbortController = new AbortController();
 
     try {
-      const result = await api(`/api/worktree/${encodeURIComponent(name)}/${action}`, 'POST');
+      const result = await api(`/api/worktree/${encodeURIComponent(name)}/${action}`, 'POST', null, actionAbortController.signal);
       msg.textContent = result.message || 'Done.';
       msg.style.color = 'var(--green)';
 
@@ -1107,13 +1172,24 @@
       await fetchWorktrees();
       renderContent();
     } catch (err) {
-      msg.textContent = err.message;
-      msg.style.color = 'var(--red)';
+      if (err.name === 'AbortError') {
+        msg.textContent = 'Operation aborted.';
+        msg.style.color = 'var(--text-secondary)';
+      } else {
+        msg.textContent = err.message;
+        msg.style.color = 'var(--red)';
+      }
     } finally {
+      overlay.classList.remove('active');
       mergeBtn.disabled = false;
       discardBtn.disabled = false;
+      actionAbortController = null;
     }
   }
+
+  document.getElementById('progressAbort').addEventListener('click', function() {
+    if (actionAbortController) actionAbortController.abort();
+  });
 
   // Utilities
   function esc(str) {
