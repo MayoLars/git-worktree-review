@@ -4,8 +4,9 @@ import { getFlag } from "./utils";
 export default async function config() {
   const portStr = getFlag("--port") ?? getFlag("-p");
   const idleTimeoutStr = getFlag("--idletimeout");
+  const worktreesDirStr = getFlag("--worktreesdir");
 
-  if (!portStr && !idleTimeoutStr) {
+  if (!portStr && !idleTimeoutStr && !worktreesDirStr) {
     const current = await loadConfig();
     console.log("Current config (.wtr.json):");
     console.log(JSON.stringify(current, null, 2));
@@ -32,6 +33,11 @@ export default async function config() {
     }
     current.idleTimeout = idleTimeout;
     console.log(`Saved idleTimeout ${idleTimeout}s to .wtr.json`);
+  }
+
+  if (worktreesDirStr) {
+    current.worktreesDir = worktreesDirStr;
+    console.log(`Saved worktreesDir '${worktreesDirStr}' to .wtr.json`);
   }
 
   await saveConfig(current);

@@ -1,4 +1,4 @@
-import { discardWorktree } from "../core/git";
+import { discardWorktree, getWorktrees } from "../core/git";
 import { readLine } from "./utils";
 
 export default async function discard() {
@@ -10,7 +10,21 @@ export default async function discard() {
 
   const keepBranch = process.argv.includes("--keep-branch");
 
-  // Confirm
+  const worktrees = await getWorktrees();
+  const wt = worktrees.find((w) => w.name === name);
+  if (!wt) {
+    console.error(`Error: Worktree '${name}' not found.`);
+    process.exit(1);
+  }
+
+  // Show commands
+  console.log(`\nThis will run:`);
+  console.log(`  \x1b[2m1.\x1b[0m git worktree remove ${wt.path} --force`);
+  if (!keepBranch) {
+    console.log(`  \x1b[2m2.\x1b[0m git branch -D ${wt.branch}`);
+  }
+  console.log();
+
   process.stdout.write(
     `Discard worktree '${name}'${keepBranch ? "" : " and delete its branch"}? (y/N) `
   );

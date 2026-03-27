@@ -153,7 +153,26 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
+  .btn-create {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-create:hover { background: var(--bg-hover); color: var(--text-primary); }
 
   .sidebar-list {
     flex: 1;
@@ -544,6 +563,56 @@
   }
   .progress-abort:hover { background: var(--red-bg); }
 
+  /* Create dialog */
+  .create-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+  .create-overlay.active { display: flex; }
+  .create-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    min-width: 360px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  .create-box h3 {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: var(--text-primary);
+  }
+  .create-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: var(--font-mono);
+    outline: none;
+    box-sizing: border-box;
+  }
+  .create-input:focus { border-color: var(--accent); }
+  .create-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .create-error {
+    color: var(--red);
+    font-size: 13px;
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
   /* Loading & error states */
   .loading {
     display: flex;
@@ -710,7 +779,7 @@
 
 <div class="main-layout">
   <aside class="sidebar">
-    <div class="sidebar-header">Worktrees</div>
+    <div class="sidebar-header">Worktrees <button class="btn-create" id="createBtn" title="Create new worktree">+</button></div>
     <div class="sidebar-list" id="sidebarList">
       <div class="loading"><div class="spinner"></div> Loading...</div>
     </div>
@@ -736,6 +805,22 @@
     <div class="progress-spinner"></div>
     <div class="progress-label" id="progressLabel">Merging...</div>
     <button class="progress-abort" id="progressAbort">Abort</button>
+  </div>
+</div>
+
+<div class="create-overlay" id="createOverlay">
+  <div class="create-box">
+    <h3>New Worktree</h3>
+    <input type="text" class="create-input" id="createInput" placeholder="branch-name" autocomplete="off" spellcheck="false">
+    <div class="create-error" id="createError"></div>
+    <code id="createCmdPreview" style="display:block;background:var(--bg-tertiary);padding:10px 12px;border-radius:4px;font-size:12px;font-family:var(--font-mono);line-height:2;color:var(--text-secondary);margin-top:12px">
+      <strong style="color:var(--text-primary)">1.</strong> git worktree add -b <em>&lt;branch&gt;</em> .worktrees/<em>&lt;branch&gt;</em> <span style="color:var(--text-muted)">— creates worktree with new branch</span><br>
+      <span style="color:var(--text-muted);font-size:11px;margin-left:16px">If branch exists: git worktree add .worktrees/<em>&lt;branch&gt;</em> <em>&lt;branch&gt;</em></span>
+    </code>
+    <div class="create-actions">
+      <button class="btn btn-cancel" onclick="closeCreate()">Cancel</button>
+      <button class="btn btn-merge" id="createSubmit">Create</button>
+    </div>
   </div>
 </div>
 
@@ -784,9 +869,13 @@
 
   // API helpers
   async function api(path, method = 'GET', body = null, signal = null) {
-    const opts = { method };
+    const opts = { method, headers: {} };
     if (method === 'POST') {
-      opts.headers = { 'X-Requested-With': 'wtr' };
+      opts.headers['X-Requested-With'] = 'wtr';
+    }
+    if (body) {
+      opts.body = body;
+      opts.headers['Content-Type'] = 'application/json';
     }
     if (signal) opts.signal = signal;
     const res = await fetch(path, opts);
@@ -1189,6 +1278,70 @@
 
   document.getElementById('progressAbort').addEventListener('click', function() {
     if (actionAbortController) actionAbortController.abort();
+  });
+
+  // Create worktree
+  function updateCreatePreview() {
+    const branch = document.getElementById('createInput').value.trim();
+    const preview = document.getElementById('createCmdPreview');
+    const b = branch ? esc(branch) : '&lt;branch&gt;';
+    preview.innerHTML =
+      `<strong style="color:var(--text-primary)">1.</strong> git worktree add -b ${b} .worktrees/${b} <span style="color:var(--text-muted)">— creates worktree with new branch</span><br>`
+      + `<span style="color:var(--text-muted);font-size:11px;margin-left:16px">If branch exists: git worktree add .worktrees/${b} ${b}</span>`;
+  }
+
+  document.getElementById('createBtn').addEventListener('click', function() {
+    document.getElementById('createInput').value = '';
+    document.getElementById('createError').textContent = '';
+    updateCreatePreview();
+    document.getElementById('createOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('createInput').focus(), 50);
+  });
+
+  window.closeCreate = function() {
+    document.getElementById('createOverlay').classList.remove('active');
+  };
+
+  document.getElementById('createOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeCreate();
+  });
+
+  document.getElementById('createInput').addEventListener('input', updateCreatePreview);
+
+  document.getElementById('createInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('createSubmit').click();
+    if (e.key === 'Escape') closeCreate();
+  });
+
+  document.getElementById('createSubmit').addEventListener('click', async function() {
+    const input = document.getElementById('createInput');
+    const errorEl = document.getElementById('createError');
+    const branch = input.value.trim();
+
+    if (!branch) {
+      errorEl.textContent = 'Branch name is required.';
+      return;
+    }
+    if (!/^[a-zA-Z0-9._\-/]+$/.test(branch)) {
+      errorEl.textContent = 'Invalid branch name.';
+      return;
+    }
+
+    errorEl.textContent = '';
+    this.disabled = true;
+    this.textContent = 'Creating...';
+
+    try {
+      const result = await api('/api/worktrees/create', 'POST', JSON.stringify({ branch }));
+      closeCreate();
+      await fetchWorktrees();
+      renderContent();
+    } catch (err) {
+      errorEl.textContent = err.message;
+    } finally {
+      this.disabled = false;
+      this.textContent = 'Create';
+    }
   });
 
   // Utilities

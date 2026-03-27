@@ -9,6 +9,7 @@ const commands: Record<string, () => Promise<void>> = {
   diff: () => import("./diff").then((m) => m.default()),
   merge: () => import("./merge").then((m) => m.default()),
   discard: () => import("./discard").then((m) => m.default()),
+  create: () => import("./create").then((m) => m.default()),
   web: () => {
     const demo = process.argv.includes("--demo");
     return import("../web/server").then((m) => m.default({ demo }));
@@ -34,13 +35,14 @@ Usage: wtr <command> [options]
 
 Commands:
   status              List all worktrees with diff stats
+  create <branch>     Create a new worktree (in .worktrees/ by default)
   summary <name>      AI summary of worktree changes (via gh copilot)
   diff <name>         Show colorized diff for a worktree
   merge <name>        Merge worktree branch and clean up
   discard <name>      Remove worktree and delete branch
   web                 Start the web UI
   web --demo          Start the web UI with mock data
-  config              View/set config (e.g. --port 3333 --idletimeout 60)
+  config              View/set config (e.g. --port 3333 --worktreesdir .wt)
   update              Pull latest changes and reinstall
   version             Show current version
 

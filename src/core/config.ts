@@ -4,6 +4,7 @@ import { join } from "path";
 export interface WtrConfig {
   port?: number;
   idleTimeout?: number;
+  worktreesDir?: string;
 }
 
 const CONFIG_FILE = ".wtr.json";

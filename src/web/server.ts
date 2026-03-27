@@ -1,4 +1,4 @@
-import { getWorktrees, getBaseBranch, getDiff, getDiffStat, mergeWorktree, discardWorktree } from "../core/git";
+import { getWorktrees, getBaseBranch, getDiff, getDiffStat, mergeWorktree, discardWorktree, createWorktree } from "../core/git";
 import { loadConfig } from "../core/config";
 import type { WorktreeDetail } from "../core/types";
 import { handleDemoApi } from "./demo-data";
@@ -121,6 +121,18 @@ async function handleApi(req: Request, path: string, url: URL): Promise<Response
       const name = decodeURIComponent(discardMatch[1]);
       if (!validateWorktreeName(name)) return json({ error: "Invalid worktree name" }, 400);
       const result = await discardWorktree(name);
+      return json(result, result.success ? 200 : 400);
+    }
+
+    // POST /api/worktrees/create
+    if (path === "/api/worktrees/create" && req.method === "POST") {
+      const body = await req.json();
+      const branch = body?.branch;
+      if (!branch || typeof branch !== "string") {
+        return json({ error: "Missing 'branch' in request body" }, 400);
+      }
+      if (!validateWorktreeName(branch)) return json({ error: "Invalid branch name" }, 400);
+      const result = await createWorktree(branch);
       return json(result, result.success ? 200 : 400);
     }
 

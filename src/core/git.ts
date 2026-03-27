@@ -1,5 +1,7 @@
 import { $ } from "bun";
+import { join } from "path";
 import type { Worktree, DiffStat, FileDiff, DiffResult } from "./types";
+import { loadConfig } from "./config";
 
 export async function isGitRepo(cwd?: string): Promise<boolean> {
   try {
@@ -297,4 +299,49 @@ export async function discardWorktree(
       ? `Removed worktree and deleted branch '${wt.branch}'.`
       : `Removed worktree. Branch '${wt.branch}' kept.`,
   };
+}
+
+async function getRepoRoot(): Promise<string> {
+  const result = await $`git rev-parse --show-toplevel`.quiet();
+  return result.text().trim();
+}
+
+export async function getWorktreesDir(): Promise<string> {
+  const config = await loadConfig();
+  const root = await getRepoRoot();
+  return config.worktreesDir
+    ? join(root, config.worktreesDir)
+    : join(root, ".worktrees");
+}
+
+export async function createWorktree(
+  branchName: string
+): Promise<{ success: boolean; message: string }> {
+  // Validate branch name
+  if (!/^[a-zA-Z0-9._\-/]+$/.test(branchName)) {
+    return { success: false, message: "Invalid branch name." };
+  }
+
+  // Check if branch already exists
+  const branchCheck = await $`git rev-parse --verify ${branchName}`.quiet().nothrow();
+  const branchExists = branchCheck.exitCode === 0;
+
+  const dir = await getWorktreesDir();
+  const worktreePath = join(dir, branchName);
+
+  if (branchExists) {
+    // Existing branch — just add worktree
+    const result = await $`git worktree add ${worktreePath} ${branchName}`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { success: false, message: result.stderr.toString().trim() };
+    }
+    return { success: true, message: `Created worktree for existing branch '${branchName}' at ${worktreePath}` };
+  }
+
+  // New branch — create with -b
+  const result = await $`git worktree add -b ${branchName} ${worktreePath}`.quiet().nothrow();
+  if (result.exitCode !== 0) {
+    return { success: false, message: result.stderr.toString().trim() };
+  }
+  return { success: true, message: `Created worktree with new branch '${branchName}' at ${worktreePath}` };
 }
